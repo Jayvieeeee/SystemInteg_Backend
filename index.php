@@ -19,11 +19,13 @@ require_once "middleware/ValidateMiddleware.php";
 // Controllers
 require_once "controllers/AuthController.php";
 
+
 // Load routes
 $routes = require "routes/api.php";
 
 // Error response
-function sendErrorResponse($e) {
+function sendErrorResponse($e)
+{
     $statusCode = method_exists($e, "getStatusCode") ? $e->getStatusCode() : 500;
     http_response_code($statusCode);
     header("Content-Type: application/json");
@@ -68,12 +70,15 @@ try {
         throw new NotFoundException("Route not found: $uri");
     }
 
-   
-    if (in_array($matched['action'], ['register','login'])) {
+
+    if (in_array($matched['action'], ['register', 'login'])) {
         if ($matched['action'] === 'register') {
-            $runner->add(new ValidateMiddleware(['first_name','last_name','email','username','password','contact_no']));
+            $runner->add(new ValidateMiddleware(['first_name', 'last_name', 'email', 'username', 'password', 'contact_no']));
         } elseif ($matched['action'] === 'login') {
-            $runner->add(new ValidateMiddleware(['identifier','password']));
+            $runner->add(new ValidateMiddleware([
+                'identifier' => 'Username or email',
+                'password'   => 'Password'
+            ]));
         }
     }
 
@@ -93,7 +98,6 @@ try {
     header("Content-Type: application/json");
     echo json_encode($result);
     exit;
-
 } catch (Exception $e) {
     sendErrorResponse($e);
 }

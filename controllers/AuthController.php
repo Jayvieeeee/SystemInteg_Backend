@@ -1,39 +1,60 @@
 <?php
 require_once __DIR__ . '/../models/UserModel.php';
 
-class AuthController {
+require_once __DIR__ . '/../libs/php-jwt-main/src/JWT.php';
+require_once __DIR__ . '/../libs/php-jwt-main/src/Key.php';
+
+use \Firebase\JWT\JWT;
+use \Firebase\JWT\Key;
+
+class AuthController
+{
 
     private $userModel;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->userModel = new UserModel();
     }
 
-    public function login($data) {
+    public function login($data)
+    {
         $identifier = $data['identifier'] ?? '';
 
-        if(empty($identifier)) {
+        if (empty($identifier)) {
             throw new AuthException("Username or email is required", 422);
         }
-        
+
         $user = $this->userModel->findByEmailUsername($identifier);
-        if(!$user) {
+        if (!$user) {
             throw new AuthException("User not found", 401);
         }
 
-        if(!password_verify($data['password'] ?? '', $user['password'])) {
+        if (!password_verify($data['password'] ?? '', $user['password'])) {
             throw new AuthException("Incorrect password", 401);
         }
 
         unset($user['password']);
-        return[
+
+        $payload = [
+            'iss' => 'my-app',
+            'sub' => $user['user_id'],
+            'iat' => time(),
+            'exp' => time() + 3600 //1 hour expiry
+        ];
+
+        $jwt = JWT::encode($payload, JWT_SECRET_KEY, 'HS256');
+
+        return [
             "error" => false,
             "message" => "Login successful",
-            "user" => $user
+            "user" => $user,
+            "token" => $jwt
         ];
     }
 
-    public function register($data) {
+    public function register($data)
+    {
         if ($this->userModel->exists($data['email'], $data['username'])) {
             throw new ConflictException("Email or username already exists", 409);
         }
@@ -43,6 +64,6 @@ class AuthController {
         $data['contact_no'] = $data['contact_no'] ?? '';
 
         $user = $this->userModel->create($data);
-        return ["error"=>false, "message"=>"Registration successful", "user"=>$user];
+        return ["error" => false, "message" => "Registration successful", "user" => $user];
     }
 }
