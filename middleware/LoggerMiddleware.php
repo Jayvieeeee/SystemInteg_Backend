@@ -1,6 +1,5 @@
 <?php
-
-require_once "BaseMiddleware.php";
+require_once 'BaseMiddleware.php';
 
 class LoggerMiddleware extends BaseMiddleware
 {
@@ -9,14 +8,14 @@ class LoggerMiddleware extends BaseMiddleware
         $logFile = __DIR__ . "/../logs/app.log";
         $time = date("Y-m-d H:i:s");
         $method = $_SERVER['REQUEST_METHOD'] ?? 'CLI';
-        $uri = $_SERVER['REQUEST_URI'] ?? 'N/A';
+        $uri = $_SERVER['REQUES_URI'] ?? 'N/A';
 
         $safeRequest = $request;
 
         $sensitive = ['password', 'confirm_password', 'token'];
         foreach ($sensitive as $field) {
             if (isset($safeRequest[$field])) {
-                $safeRequest[$field] = '***HIDDEN***';
+                $safeRequest[$field] = '***HIDDEN****';
             }
         }
 

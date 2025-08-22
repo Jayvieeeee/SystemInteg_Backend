@@ -16,6 +16,33 @@ return [
         'auth'       => false
     ],
 
+    [
+        'path'       => '/forgot-password',
+        'method'     => 'POST',
+        'controller' => 'AuthController',
+        'action'     => 'forgotPassword',
+        'auth'       => false
+    ],
+
+
+    [
+        'path'       => '/verify-reset-code',
+        'method'     => 'POST',
+        'controller' => 'AuthController',
+        'action'     => 'verifyResetCode',
+        'auth'       => false
+
+    ],
+
+    [
+        'path'       => '/reset-password',
+        'method'     => 'POST',
+        'controller' => 'AuthController',
+        'action'     => 'resetPassword',
+        'auth'       => false
+
+    ],
+
     // Orders (sample, future use)
     [
         'path'       => '/orders',

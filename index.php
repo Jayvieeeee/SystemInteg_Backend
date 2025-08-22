@@ -15,6 +15,7 @@ require_once "middleware/CorsMiddleware.php";
 require_once "middleware/RateLimitMiddleware.php";
 require_once "middleware/SanitizeMiddleware.php";
 require_once "middleware/ValidateMiddleware.php";
+require_once "middleware/AuthMiddleware.php";
 
 // Controllers
 require_once "controllers/AuthController.php";
@@ -68,6 +69,11 @@ try {
 
     if (!$matched) {
         throw new NotFoundException("Route not found: $uri");
+    }
+
+    // Route-specific middleware: Auth
+    if (isset($matched['auth']) && $matched['auth'] === true) {
+        $runner->add(new AuthMiddleware());
     }
 
 
