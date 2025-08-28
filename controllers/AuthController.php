@@ -1,25 +1,22 @@
 <?php
-require_once __DIR__ . '/../models/UserModel.php';
 
+require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../libs/php-jwt-main/src/JWT.php';
 require_once __DIR__ . '/../libs/php-jwt-main/src/Key.php';
-require_once __DIR__ . '/../libs/PHPMailer-master/src/PHPMailer.php';
-require_once __DIR__ . '/../libs/PHPMailer-master/src/SMTP.php';
-require_once __DIR__ . '/../libs/PHPMailer-master/src/Exception.php';
+require_once __DIR__ . '/../services/EmailService.php';
 
 use \Firebase\JWT\JWT;
 use \Firebase\JWT\Key;
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 class AuthController
 {
-
     private $userModel;
+    private $emailService;
 
-    public function __construct()
+    public function __construct(UserModel $userModel, EmailService $emailService)
     {
-        $this->userModel = new UserModel();
+        $this->userModel = $userModel;
+        $this->emailService = $emailService;
     }
 
     public function login($data)
@@ -31,12 +28,9 @@ class AuthController
         }
 
         $user = $this->userModel->findByEmailUsername($identifier);
-        if (!$user) {
-            throw new AuthException("User not found", 401);
-        }
 
-        if (!password_verify($data['password'] ?? '', $user['password'])) {
-            throw new AuthException("Incorrect password", 401);
+        if (!$user || !password_verify($data['password'] ?? '', $user['password'])) {
+            throw new AuthException("Incorrect username or password", 401);
         }
 
         unset($user['password']);
@@ -69,6 +63,10 @@ class AuthController
         $data['contact_no'] = $data['contact_no'] ?? '';
 
         $user = $this->userModel->create($data);
+
+        // Send welcome email
+        $this->emailService->sendWelcomeEmail($user);
+
         return ["error" => false, "message" => "Registration successful", "user" => $user];
     }
 
@@ -91,35 +89,8 @@ class AuthController
         // save code and expiration to DB
         $this->userModel->saveResetCode($user['user_id'], $code, $exp);
 
-        // PHPMailer setup
-        $mail = new PHPMailer(true);
-        try {
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = 'dmcarss23@gmail.com';
-            $mail->Password   = 'nfww iaxw jmdp kwfv';
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port       = 587;
-            $mail->SMTPOptions = [
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                    'allow_self_signed' => true
-                ]
-            ];
-
-            $mail->setFrom('dmcarss23@gmail.com', 'Sismoya Water');
-            $mail->addAddress($email);
-            $mail->isHTML(true);
-            $mail->Subject = 'Reset Your Password';
-            $mail->Body    = "Your password reset code is: <b>$code</b>. It will expire in 15 minutes.";
-
-            $mail->send();
-        } catch (Exception $e) {
-            file_put_contents(__DIR__ . '/../logs/debug.log', "Mailer Error: " . $mail->ErrorInfo . PHP_EOL, FILE_APPEND);
-            throw new Exception("Failed to send email");
-        }
+        // Send password reset email using EmailService
+        $this->emailService->sendPasswordResetEmail($user, $code);
 
         return [
             'error' => false,

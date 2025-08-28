@@ -6,13 +6,6 @@ class ValidateMiddleware extends BaseMiddleware
 {
     private $requiredFields;
 
-    /**
-     * Example usage:
-     * $fields = [
-     *   'identifier' => 'Username or email',
-     *   'password'   => 'Password'
-     * ]
-     */
     public function __construct(array $fields)
     {
         $this->requiredFields = $fields;
@@ -21,7 +14,13 @@ class ValidateMiddleware extends BaseMiddleware
     public function handle($request)
     {
         foreach ($this->requiredFields as $field => $label) {
-            if (!isset($request[$field]) || empty($request[$field])) {
+            // Handle simple arrays (numeric keys)
+            if (is_numeric($field)) {
+                $field = $label;
+                $label = ucfirst(str_replace('_', ' ', $field));
+            }
+
+            if (!isset($request[$field]) || empty(trim($request[$field]))) {
                 throw new ValidationException("Validation failed: $label is required");
             }
         }

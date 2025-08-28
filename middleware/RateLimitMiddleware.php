@@ -19,7 +19,7 @@ class RateLimitMiddleware extends BaseMiddleware {
             $data = json_decode(file_get_contents($file), true) ?? [];
         }
 
-        // Kung wala pa entry sa IP, initialize array
+        // if no entry sa IP, initialize array
         if (!isset($data[$ip])) {
             $data[$ip] = [];
         }

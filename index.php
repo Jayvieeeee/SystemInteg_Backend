@@ -1,4 +1,7 @@
 <?php
+
+$container = require __DIR__ . '/init/Services.php';
+
 require_once "config/config.php";
 
 // Exceptions
@@ -46,11 +49,7 @@ $rawInput = file_get_contents("php://input");
 $inputData = json_decode($rawInput, true) ?? [];
 
 // Middleware runner
-$runner = new MiddlewareRunner();
-$runner->add(new LoggerMiddleware());
-$runner->add(new CorsMiddleware());
-$runner->add(new RateLimitMiddleware());
-$runner->add(new SanitizeMiddleware());
+$runner = $container->get('middlewareRunner');
 
 try {
     $matched = null;
@@ -72,20 +71,19 @@ try {
     }
 
     // Route-specific middleware: Auth
-    if (isset($matched['auth']) && $matched['auth'] === true) {
-        $runner->add(new AuthMiddleware());
+    if (!empty($matched['auth'])) {
+        $runner->add($container->get('authMiddleware'));
     }
 
 
     if (in_array($matched['action'], ['register', 'login'])) {
+        $fields = [];
         if ($matched['action'] === 'register') {
-            $runner->add(new ValidateMiddleware(['first_name', 'last_name', 'email', 'username', 'password', 'contact_no']));
+            $fields = ['first_name', 'last_name', 'email', 'username', 'password', 'contact_no'];
         } elseif ($matched['action'] === 'login') {
-            $runner->add(new ValidateMiddleware([
-                'identifier' => 'Username or email',
-                'password'   => 'Password'
-            ]));
+            $fields = ['identifier' => 'Username or email', 'password' => 'Password'];
         }
+        $runner->add($container->get('validateMiddleware', ['fields' => $fields]));
     }
 
     $request = $runner->run($inputData);
@@ -98,7 +96,7 @@ try {
         throw new NotFoundException("Controller not found: $controllerName");
     }
 
-    $controller = new $controllerName();
+    $controller = $container->get($controllerName);
     $result = call_user_func_array([$controller, $actionName], [$request, ...$params]);
 
     header("Content-Type: application/json");
