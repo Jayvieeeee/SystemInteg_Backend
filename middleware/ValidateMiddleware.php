@@ -23,6 +23,13 @@ class ValidateMiddleware extends BaseMiddleware
             if (!isset($request[$field]) || empty(trim($request[$field]))) {
                 throw new ValidationException("Validation failed: $label is required");
             }
+
+            // ✅ ADD EMAIL FORMAT VALIDATION ONLY FOR EMAIL FIELD
+            if ($field === 'email' && !filter_var($request[$field], FILTER_VALIDATE_EMAIL)) {
+                throw new ValidationException("Validation failed: Please enter a valid email format");
+            }
         }
+
+        return $request;
     }
 }

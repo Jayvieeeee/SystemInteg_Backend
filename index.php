@@ -23,7 +23,6 @@ require_once "middleware/AuthMiddleware.php";
 // Controllers
 require_once "controllers/AuthController.php";
 
-
 // Load routes
 $routes = require "routes/api.php";
 
@@ -37,6 +36,19 @@ function sendErrorResponse($e)
         "error" => true,
         "message" => (APP_ENV === 'development') ? $e->getMessage() : "Something went wrong"
     ]);
+    exit;
+}
+
+// ✅ SET CORS HEADERS AT THE VERY BEGINNING
+header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Allow-Credentials: true");
+header("Content-Type: application/json; charset=UTF-8");
+
+// ✅ Handle preflight OPTIONS requests immediately
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
     exit;
 }
 
@@ -70,11 +82,13 @@ try {
         throw new NotFoundException("Route not found: $uri");
     }
 
+    // ✅ Add CORS middleware to the runner for all requests
+    $runner->add($container->get('corsMiddleware'));
+
     // Route-specific middleware: Auth
     if (!empty($matched['auth'])) {
         $runner->add($container->get('authMiddleware'));
     }
-
 
     if (in_array($matched['action'], ['register', 'login'])) {
         $fields = [];
@@ -99,7 +113,6 @@ try {
     $controller = $container->get($controllerName);
     $result = call_user_func_array([$controller, $actionName], [$request, ...$params]);
 
-    header("Content-Type: application/json");
     echo json_encode($result);
     exit;
 } catch (Exception $e) {

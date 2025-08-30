@@ -1,0 +1,36 @@
+{
+  "name": "chrishadalmacio/sismoya",
+  "description": "Water Refilling Station",
+  "type": "project",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "Controllers\\": "controllers/",
+      "Models\\": "models/",
+      "Services\\": "services/",
+      "Middleware\\": "middleware/",
+      "Core\\": "core/",
+      "Exceptions\\": "exceptions/",
+      "Config\\": "config/",
+      "Libs\\": "libs/",
+      "Routes\\": "routes/",
+      "Scripts\\": "scripts/",
+      "Init\\": "init/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Logs\\": "logs/"
+    }
+  },
+  "authors": [
+    {
+      "name": "ann",
+      "email": "dalmaciochrisha6@gmail.com"
+    }
+  ],
+  "require": {
+    "firebase/php-jwt": "^6.8",
+    "phpmailer/phpmailer": "^6.8"
+  }
+}

@@ -27,7 +27,6 @@ class AuthMiddleware extends BaseMiddleware
             // decode token gamit JWT_SECRET_KEY
             $decoded = JWT::decode($token, new Key(JWT_SECRET_KEY, 'HS256'));
 
-            // lagay user info sa request para magamit sa controller or role middleware
             $request['userId'] = $decoded->id ?? null;
             $request['userRole'] = $decoded->role ?? null;
 
