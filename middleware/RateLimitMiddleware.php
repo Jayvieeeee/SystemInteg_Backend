@@ -1,13 +1,15 @@
-<?php 
+<?php
 
 require_once 'BaseMiddleware.php';
 require_once __DIR__ . "/../exceptions/AppException.php";
 
-class RateLimitMiddleware extends BaseMiddleware {
-    private $limit = 5;   // max requests
+class RateLimitMiddleware extends BaseMiddleware
+{
+    private $limit = 5;
     private $window = 60; // time window in seconds
 
-    public function handle($request){
+    public function handle($request)
+    {
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $file = __DIR__ . "/../logs/api.log";
 
@@ -15,7 +17,7 @@ class RateLimitMiddleware extends BaseMiddleware {
         $data = [];
 
         // Load existing log
-        if(file_exists($file)) {
+        if (file_exists($file)) {
             $data = json_decode(file_get_contents($file), true) ?? [];
         }
 
@@ -27,8 +29,8 @@ class RateLimitMiddleware extends BaseMiddleware {
         // Remove expired requests (older than $window)
         $data[$ip] = array_filter($data[$ip], fn($t) => $t > ($now - $this->window));
 
-        // Check limit
-        if(count($data[$ip]) >= $this->limit){
+
+        if (count($data[$ip]) >= $this->limit) {
             throw new AppException("Too many requests. Please try again later.", 429);
         }
 

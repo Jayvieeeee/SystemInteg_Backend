@@ -1,10 +1,5 @@
 <?php
 
-require_once __DIR__ . '/../models/UserModel.php';
-require_once __DIR__ . '/../libs/php-jwt-main/src/JWT.php';
-require_once __DIR__ . '/../libs/php-jwt-main/src/Key.php';
-require_once __DIR__ . '/../services/EmailService.php';
-
 use \Firebase\JWT\JWT;
 use \Firebase\JWT\Key;
 

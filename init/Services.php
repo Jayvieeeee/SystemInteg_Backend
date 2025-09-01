@@ -4,14 +4,19 @@ require_once __DIR__ . '/../core/Container.php';
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/db.php';
 
-// Models
-require_once __DIR__ . '/../models/UserModel.php';
-
 // Services
 require_once __DIR__ . '/../services/EmailService.php';
 
+
+// Models
+require_once __DIR__ . '/../models/UserModel.php';
+require_once __DIR__ . '/../models/ContainerModel.php';
+
+
 // Controllers 
 require_once __DIR__ . '/../controllers/AuthController.php';
+require_once __DIR__ . '/../controllers/ContainerController.php';
+
 
 // Middlewares 
 require_once __DIR__ . '/../middleware/LoggerMiddleware.php';
@@ -43,8 +48,9 @@ $container->set('db', fn($c, $params) => $conn);
 
 // Models
 $container->set('userModel', fn($c, $params) => new UserModel($c->get('db')));
+$container->set('containerModel', fn($c, $params) => new ContainerModel($c->get('db')));
 
-// Libraries - KEEP mailer for EmailService to use
+//for EmailService to use
 $container->set('mailer', function ($c, $params) {
     $mail = new PHPMailer(true);
     $mail->isSMTP();
@@ -85,10 +91,13 @@ $container->set('middlewareRunner', function ($c, $params) {
     return $runner;
 });
 
-// Controllers - USING EmailService instead of PHPMailer
 $container->set('AuthController', fn($c, $params) => new AuthController(
     $c->get('userModel'),
-    $c->get('emailService')  // ← This is what you want!
+    $c->get('emailService')
+));
+
+$container->set('ContainerController', fn($c, $params) => new ContainerController(
+    $c->get('containerModel')
 ));
 
 return $container;

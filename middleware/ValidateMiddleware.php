@@ -14,7 +14,6 @@ class ValidateMiddleware extends BaseMiddleware
     public function handle($request)
     {
         foreach ($this->requiredFields as $field => $label) {
-            // Handle simple arrays (numeric keys)
             if (is_numeric($field)) {
                 $field = $label;
                 $label = ucfirst(str_replace('_', ' ', $field));
@@ -24,7 +23,6 @@ class ValidateMiddleware extends BaseMiddleware
                 throw new ValidationException("Validation failed: $label is required");
             }
 
-            // ✅ ADD EMAIL FORMAT VALIDATION ONLY FOR EMAIL FIELD
             if ($field === 'email' && !filter_var($request[$field], FILTER_VALIDATE_EMAIL)) {
                 throw new ValidationException("Validation failed: Please enter a valid email format");
             }
