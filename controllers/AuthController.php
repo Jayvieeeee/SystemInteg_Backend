@@ -33,9 +33,12 @@ class AuthController
         $payload = [
             'iss' => 'my-app',
             'sub' => $user['user_id'],
+            'id' => $user['user_id'],
+            'role' => $user['role'],
             'iat' => time(),
-            'exp' => time() + 3600 //1 hour expiry
+            'exp' => time() + 3600
         ];
+
 
         $jwt = JWT::encode($payload, JWT_SECRET_KEY, 'HS256');
 
@@ -112,6 +115,30 @@ class AuthController
             'message' => 'Code verified successfully'
         ];
     }
+
+    public function resendResetCode($request)
+    {
+        $userId = $request['userId'] ?? null; // ✅ galing sa token
+        if (!$userId) throw new AuthException("Unauthorized", 401);
+
+        $user = $this->userModel->findById($userId);
+        if (!$user) throw new NotFoundException("User not found", 404);
+
+        // generate new code
+        $code = random_int(100000, 999999);
+        $exp = time() + 900; // 15 mins
+
+        $this->userModel->saveResetCode($userId, $code, $exp);
+        $this->emailService->sendPasswordResetEmail($user, $code);
+
+        return [
+            'error' => false,
+            'message' => 'New reset code sent to your email'
+        ];
+    }
+
+
+
 
     public function resetPassword($data)
     {

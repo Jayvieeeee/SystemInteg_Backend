@@ -109,6 +109,7 @@ class UserModel
         return $stmt->get_result()->fetch_assoc();
     }
 
+
     public function deleteResetCode($userId)
     {
         $stmt = $this->conn->prepare("UPDATE users 
@@ -119,6 +120,7 @@ class UserModel
             throw new Exception("Failed to delete reset code: " . $stmt->error);
         }
     }
+
 
     public function updatePassword($userId, $hashedPassword)
     {

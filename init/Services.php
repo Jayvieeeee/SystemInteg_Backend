@@ -10,12 +10,16 @@ require_once __DIR__ . '/../services/EmailService.php';
 
 // Models
 require_once __DIR__ . '/../models/UserModel.php';
-require_once __DIR__ . '/../models/ContainerModel.php';
+require_once __DIR__ . '/../models/GallonModel.php';
+require_once __DIR__ . '/../models/OrderModel.php';
+require_once __DIR__ . '/../models/AddressModel.php';
 
 
 // Controllers 
 require_once __DIR__ . '/../controllers/AuthController.php';
-require_once __DIR__ . '/../controllers/ContainerController.php';
+require_once __DIR__ . '/../controllers/GallonController.php';
+require_once __DIR__ . '/../controllers/OrderController.php';
+require_once __DIR__ . '/../controllers/AddressController.php';
 
 
 // Middlewares 
@@ -48,7 +52,9 @@ $container->set('db', fn($c, $params) => $conn);
 
 // Models
 $container->set('userModel', fn($c, $params) => new UserModel($c->get('db')));
-$container->set('containerModel', fn($c, $params) => new ContainerModel($c->get('db')));
+$container->set('gallonModel', fn($c, $params) => new GallonModel($c->get('db')));
+$container->set('orderModel', fn($c, $params) => new OrderModel($c->get('db')));
+$container->set('addressModel', fn($c, $params) => new AddressModel($c->get('db')));
 
 //for EmailService to use
 $container->set('mailer', function ($c, $params) {
@@ -96,8 +102,17 @@ $container->set('AuthController', fn($c, $params) => new AuthController(
     $c->get('emailService')
 ));
 
-$container->set('ContainerController', fn($c, $params) => new ContainerController(
-    $c->get('containerModel')
+$container->set('GallonController', fn($c, $params) => new GallonController(
+    $c->get('gallonModel')
 ));
+
+$container->set('OrderController', fn($c, $params) => new OrderController(
+    $c->get('orderModel'),
+    $c->get('addressModel')
+));
+$container->set('AddressController', fn($c, $params) => new AddressController(
+    $c->get('addressModel')
+));
+
 
 return $container;

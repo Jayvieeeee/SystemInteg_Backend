@@ -23,7 +23,7 @@ function sendErrorResponse($e)
     exit;
 }
 
-header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Access-Control-Allow-Credentials: true");
@@ -83,8 +83,8 @@ try {
         $runner->add($container->get('validateMiddleware', ['fields' => $fields]));
     }
 
-    // Add validation for Container POST/PUT
-    if (in_array($matched['action'], ['createContainer', 'updateContainer'])) {
+    // Add validation for Gallon POST/PUT
+    if (in_array($matched['action'], ['createGallon', 'updateGallon'])) {
         $fields = ['name', 'image_url', 'size', 'price'];
         $runner->add($container->get('validateMiddleware', ['fields' => $fields]));
     }

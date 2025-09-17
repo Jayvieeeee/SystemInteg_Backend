@@ -1,20 +1,30 @@
 <?php
 return [
     // Auth
-    ['path' => '/register', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'register', 'auth' => false],
-    ['path' => '/login', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'login', 'auth' => false],
-    ['path' => '/forgot-password', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'forgotPassword', 'auth' => false],
+    ['path' => '/register',          'method' => 'POST', 'controller' => 'AuthController', 'action' => 'register', 'auth' => false],
+    ['path' => '/login',             'method' => 'POST', 'controller' => 'AuthController', 'action' => 'login', 'auth' => false],
+    ['path' => '/forgot-password',   'method' => 'POST', 'controller' => 'AuthController', 'action' => 'forgotPassword', 'auth' => false],
     ['path' => '/verify-reset-code', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'verifyResetCode', 'auth' => false],
-    ['path' => '/reset-password', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'resetPassword', 'auth' => false],
+    ['path' => '/reset-password',    'method' => 'POST', 'controller' => 'AuthController', 'action' => 'resetPassword', 'auth' => false],
+    ['path' => '/resend-reset-code', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'resendResetCode', 'auth' => true],
 
-    // Containers
-    ['path' => '/containers', 'method' => 'GET', 'controller' => 'ContainerController', 'action' => 'getAllContainers', 'auth' => false],
-    ['path' => '/containers/{id}', 'method' => 'GET', 'controller' => 'ContainerController', 'action' => 'getContainer', 'auth' => false],
-    ['path' => '/containers', 'method' => 'POST', 'controller' => 'ContainerController', 'action' => 'createContainer', 'auth' => false], //make false after test
-    ['path' => '/containers/{id}', 'method' => 'PUT', 'controller' => 'ContainerController', 'action' => 'updateContainer', 'auth' => true],
-    ['path' => '/containers/{id}', 'method' => 'DELETE', 'controller' => 'ContainerController', 'action' => 'deleteContainer', 'auth' => true],
+    // Gallons
+    ['path' => '/gallons',           'method' => 'GET',    'controller' => 'GallonController',  'action' => 'getAllGallons',     'auth' => true],
+    ['path' => '/gallons/{id}',      'method' => 'GET',    'controller' => 'GallonController',  'action' => 'getGallon',         'auth' => true],
+    ['path' => '/gallons',           'method' => 'POST',   'controller' => 'GallonController',  'action' => 'createGallon',      'auth' => true], // make true later
+    ['path' => '/gallons/{id}',      'method' => 'PUT',    'controller' => 'GallonController',  'action' => 'updateGallon',      'auth' => true],
+    ['path' => '/gallons/{id}',      'method' => 'DELETE', 'controller' => 'GallonController',  'action' => 'deleteGallon',      'auth' => true],
 
-    // Orders (sample, future use)
-    ['path' => '/orders', 'method' => 'GET', 'controller' => 'OrderController', 'action' => 'getOrders', 'auth' => true],
-    ['path' => '/orders/{id}', 'method' => 'GET', 'controller' => 'OrderController', 'action' => 'getOrderById', 'auth' => true],
+    // Orders
+    ['path' => '/orders',            'method' => 'POST',   'controller' => 'OrderController',   'action' => 'createOrder',       'auth' => true],
+    ['path' => '/orders/{id}',       'method' => 'GET',    'controller' => 'OrderController',   'action' => 'getOrder',          'auth' => true],
+    ['path' => '/orders',            'method' => 'GET',    'controller' => 'OrderController',   'action' => 'getUserOrders',     'auth' => true],
+
+    // Addresses
+    ['path' => '/addresses',         'method' => 'GET',    'controller' => 'AddressController', 'action' => 'getUserAddresses',  'auth' => true],
+    ['path' => '/addresses',         'method' => 'POST',   'controller' => 'AddressController', 'action' => 'createAddress',     'auth' => true],
+    ['path' => '/addresses/{id}',    'method' => 'GET',    'controller' => 'AddressController', 'action' => 'getAddress',        'auth' => true],
+    ['path' => '/addresses/{id}',    'method' => 'PUT',    'controller' => 'AddressController', 'action' => 'updateAddress',     'auth' => true],
+    ['path' => '/addresses/{id}',    'method' => 'DELETE', 'controller' => 'AddressController', 'action' => 'deleteAddress',     'auth' => true],
+    ['path' => '/addresses/{id}/default', 'method' => 'POST', 'controller' => 'AddressController', 'action' => 'setDefaultAddress', 'auth' => true],
 ];
