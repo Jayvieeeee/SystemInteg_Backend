@@ -8,8 +8,9 @@ class AddressController
         $this->addressModel = $addressModel;
     }
 
-    public function getUserAddresses($request, $userId)
+    public function getUserAddresses($userId)
     {
+        error_log("JWT userId sa GET: " . $userId);
         $addresses = $this->addressModel->getUserAddresses($userId);
 
         return [
@@ -19,8 +20,13 @@ class AddressController
         ];
     }
 
-    public function getAddress($request, $id, $userId)
+
+    public function getAddress($id, $userId)
     {
+
+        error_log("Debug - Address ID received: " . $id);
+        error_log("Debug - User ID from token: " . $userId);
+
         $address = $this->addressModel->getAddressById($id, $userId);
 
         if (!$address) {
@@ -33,30 +39,37 @@ class AddressController
         ];
     }
 
+
     public function createAddress($data, $userId)
     {
-        // Validate required fields
-        $requiredFields = ['label', 'address', 'city', 'state', 'zip_code'];
+
+        $requiredFields = ['label', 'address'];
         foreach ($requiredFields as $field) {
             if (empty($data[$field])) {
                 throw new ValidationException("Missing required field: $field", 422);
             }
         }
 
-        // Validate label
-        $validLabels = ['home', 'office', 'other'];
-        if (!in_array($data['label'], $validLabels)) {
-            throw new ValidationException("Label must be one of: " . implode(', ', $validLabels), 422);
+
+        $label = trim($data['label']);
+        if ($label === '') {
+            throw new ValidationException("Label cannot be empty", 422);
+        }
+
+
+        $defaultAddress = $this->addressModel->getDefaultAddress($userId);
+        $isDefault = !empty($data['is_default']) ? 1 : 0;
+
+
+        if ($isDefault && $defaultAddress) {
+            $this->addressModel->setDefaultAddress($defaultAddress['address_id'], $userId, false);
         }
 
         $addressData = [
             'user_id' => $userId,
-            'label' => $data['label'],
+            'label' => $label,
             'address' => $data['address'],
-            'city' => $data['city'],
-            'state' => $data['state'],
-            'zip_code' => $data['zip_code'],
-            'is_default' => !empty($data['is_default']) ? 1 : 0
+            'is_default' => $isDefault
         ];
 
         $addressId = $this->addressModel->create($addressData);
@@ -68,28 +81,21 @@ class AddressController
         ];
     }
 
+
     public function updateAddress($data, $id, $userId)
     {
-        // Check if address exists and belongs to user
         $address = $this->addressModel->getAddressById($id, $userId);
         if (!$address) {
             throw new NotFoundException("Address not found", 404);
         }
 
-        // Validate label if provided
-        if (!empty($data['label'])) {
-            $validLabels = ['home', 'office', 'other'];
-            if (!in_array($data['label'], $validLabels)) {
-                throw new ValidationException("Label must be one of: " . implode(', ', $validLabels), 422);
-            }
+        if (isset($data['label']) && $data['label'] === '') {
+            throw new ValidationException("Label cannot be empty", 422);
         }
 
         $updateData = [
             'label' => $data['label'] ?? $address['label'],
             'address' => $data['address'] ?? $address['address'],
-            'city' => $data['city'] ?? $address['city'],
-            'state' => $data['state'] ?? $address['state'],
-            'zip_code' => $data['zip_code'] ?? $address['zip_code'],
             'is_default' => isset($data['is_default']) ? ($data['is_default'] ? 1 : 0) : $address['is_default']
         ];
 
@@ -105,9 +111,8 @@ class AddressController
         }
     }
 
-    public function deleteAddress($request, $id, $userId)
+    public function deleteAddress($id, $userId)
     {
-        // Check if address exists and belongs to user
         $address = $this->addressModel->getAddressById($id, $userId);
         if (!$address) {
             throw new NotFoundException("Address not found", 404);
@@ -125,9 +130,8 @@ class AddressController
         }
     }
 
-    public function setDefaultAddress($request, $id, $userId)
+    public function setDefaultAddress($id, $userId)
     {
-        // Check if address exists and belongs to user
         $address = $this->addressModel->getAddressById($id, $userId);
         if (!$address) {
             throw new NotFoundException("Address not found", 404);

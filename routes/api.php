@@ -7,6 +7,7 @@ return [
     ['path' => '/verify-reset-code', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'verifyResetCode', 'auth' => false],
     ['path' => '/reset-password',    'method' => 'POST', 'controller' => 'AuthController', 'action' => 'resetPassword', 'auth' => false],
     ['path' => '/resend-reset-code', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'resendResetCode', 'auth' => true],
+    ['path' => '/logout', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'logout', 'auth' => true],
 
     // Gallons
     ['path' => '/gallons',           'method' => 'GET',    'controller' => 'GallonController',  'action' => 'getAllGallons',     'auth' => true],
@@ -27,4 +28,7 @@ return [
     ['path' => '/addresses/{id}',    'method' => 'PUT',    'controller' => 'AddressController', 'action' => 'updateAddress',     'auth' => true],
     ['path' => '/addresses/{id}',    'method' => 'DELETE', 'controller' => 'AddressController', 'action' => 'deleteAddress',     'auth' => true],
     ['path' => '/addresses/{id}/default', 'method' => 'POST', 'controller' => 'AddressController', 'action' => 'setDefaultAddress', 'auth' => true],
+
+    ['path' => '/profile',        'method' => 'GET',  'controller' => 'ProfileController', 'action' => 'profile', 'auth' => true],
+
 ];

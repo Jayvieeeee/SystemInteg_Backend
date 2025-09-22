@@ -28,7 +28,7 @@ class AuthController
             throw new AuthException("Incorrect username or password", 401);
         }
 
-        unset($user['password']);
+        unset($user['password'], $user['reset_code'], $user['reset_code_exp'], $user['reset_verified']);
 
         $payload = [
             'iss' => 'my-app',
@@ -36,9 +36,9 @@ class AuthController
             'id' => $user['user_id'],
             'role' => $user['role'],
             'iat' => time(),
-            'exp' => time() + 3600
+            'exp' => time() + 3600,
+            'jti' => bin2hex(random_bytes(16)) // unique token ID
         ];
-
 
         $jwt = JWT::encode($payload, JWT_SECRET_KEY, 'HS256');
 
@@ -138,8 +138,6 @@ class AuthController
     }
 
 
-
-
     public function resetPassword($data)
     {
         $newPassword = $data['password'] ?? '';
@@ -164,6 +162,15 @@ class AuthController
         return [
             'error' => false,
             'message' => 'Password successfully updated'
+        ];
+    }
+
+    public function logout()
+    {
+        // Sa JWT, walang server-side session kaya logout ay frontend responsibility
+        return [
+            'error' => false,
+            'message' => 'Logout successful'
         ];
     }
 }

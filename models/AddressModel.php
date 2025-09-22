@@ -11,10 +11,10 @@ class AddressModel
     public function getUserAddresses($userId)
     {
         $stmt = $this->conn->prepare("
-            SELECT * FROM addresses 
-            WHERE user_id = ? 
-            ORDER BY is_default DESC, created_at DESC
-        ");
+        SELECT * FROM addresses 
+        WHERE user_id = ? 
+        ORDER BY is_default DESC, created_at DESC
+    ");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -27,25 +27,22 @@ class AddressModel
         return $addresses;
     }
 
+
     public function getDefaultAddress($userId)
     {
         $stmt = $this->conn->prepare("
-            SELECT * FROM addresses 
-            WHERE user_id = ? AND is_default = TRUE 
-            LIMIT 1
-        ");
+        SELECT * FROM addresses 
+        WHERE user_id = ? AND is_default = 1 
+        LIMIT 1
+    ");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result();
 
-        if ($result->num_rows === 0) {
-            // If no default address, get the first address
-            $addresses = $this->getUserAddresses($userId);
-            return count($addresses) > 0 ? $addresses[0] : false;
-        }
-
-        return $result->fetch_assoc();
+        // Return default address, or false kung wala
+        return $result->fetch_assoc() ?: false;
     }
+
 
     public function getAddressById($addressId, $userId)
     {
@@ -115,25 +112,15 @@ class AddressModel
         return $stmt->execute();
     }
 
-    public function setDefaultAddress($addressId, $userId)
+    public function setDefaultAddress($addressId, $userId, $set = true)
     {
-        // First, remove default from all addresses of this user
-        $stmt1 = $this->conn->prepare("
-            UPDATE addresses 
-            SET is_default = FALSE 
-            WHERE user_id = ?
-        ");
-        $stmt1->bind_param("i", $userId);
-        $stmt1->execute();
-
-        // Then set the specified address as default
-        $stmt2 = $this->conn->prepare("
-            UPDATE addresses 
-            SET is_default = TRUE 
-            WHERE address_id = ? AND user_id = ?
-        ");
-        $stmt2->bind_param("ii", $addressId, $userId);
-
-        return $stmt2->execute();
+        $stmt = $this->conn->prepare("
+        UPDATE addresses 
+        SET is_default = ? 
+        WHERE address_id = ? AND user_id = ?
+    ");
+        $flag = $set ? 1 : 0; // 1 = set default, 0 = unset default
+        $stmt->bind_param("iii", $flag, $addressId, $userId);
+        return $stmt->execute();
     }
 }

@@ -91,6 +91,8 @@ try {
 
     $request = $runner->run($inputData);
 
+    $userId = $request['userId'] ?? null;
+
     // Call controller + action
     $controllerName = $matched['controller'];
     $actionName = $matched['action'];
@@ -99,8 +101,53 @@ try {
         throw new NotFoundException("Controller not found: $controllerName");
     }
 
+    // instantiate controller via container
     $controller = $container->get($controllerName);
-    $result = call_user_func_array([$controller, $actionName], [$request, ...$params]);
+
+    $params = $matched['params'] ?? [];
+    $params = is_array($params) ? $params : [];
+
+    switch ($actionName) {
+        case 'createAddress':
+            $result = $controller->$actionName($inputData, $userId, ...$params);
+            break;
+
+        case 'updateAddress':
+            error_log("updateAddress - URI: " . $uri);
+            error_log("updateAddress - Params: " . print_r($params, true));
+            error_log("updateAddress - Params count: " . count($params));
+
+            // If no parameters extracted, try manual fallback
+            if (empty($params)) {
+                $parts = explode('/', $uri);
+                $addressId = end($parts);
+                error_log("updateAddress - Manually extracted ID: " . $addressId);
+                $result = $controller->updateAddress($inputData, $addressId, $userId);
+            } else {
+                $result = $controller->updateAddress($inputData, $params[0] ?? null, $userId);
+            }
+            break;
+        case 'deleteAddress':
+        case 'setDefaultAddress':
+        case 'getUserAddresses':
+            $result = $controller->$actionName($userId, ...$params);
+            break;
+        case 'createOrder':
+            $result = $controller->$actionName($request, ...$params);
+            break;
+        case 'getAddress':
+            if (empty($params)) {
+                $parts = explode('/', $uri);
+                $addressId = end($parts);
+                $result = $controller->getAddress($addressId, $userId);
+            } else {
+                $result = $controller->getAddress($params[0] ?? null, $userId);
+            }
+            break;
+        default:
+            $result = $controller->$actionName($inputData, ...$params);
+            break;
+    }
 
     echo json_encode($result);
     exit;

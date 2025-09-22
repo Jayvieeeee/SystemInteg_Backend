@@ -20,6 +20,7 @@ require_once __DIR__ . '/../controllers/AuthController.php';
 require_once __DIR__ . '/../controllers/GallonController.php';
 require_once __DIR__ . '/../controllers/OrderController.php';
 require_once __DIR__ . '/../controllers/AddressController.php';
+require_once __DIR__ . '/../controllers/ProfileController.php';
 
 
 // Middlewares 
@@ -113,6 +114,10 @@ $container->set('OrderController', fn($c, $params) => new OrderController(
 $container->set('AddressController', fn($c, $params) => new AddressController(
     $c->get('addressModel')
 ));
+$container->set('ProfileController', fn($c, $params) => new ProfileController(
+    $c->get('userModel')
+));
+
 
 
 return $container;

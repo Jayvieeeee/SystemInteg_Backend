@@ -11,9 +11,6 @@ class OrderController
         $this->addressModel = $addressModel;
     }
 
-    // -------------------------
-    // CREATE ORDER
-    // -------------------------
     public function createOrder($request)
     {
         $data = $request; // $request contains input + injected userId
@@ -46,9 +43,6 @@ class OrderController
             $addressDetails = $address;
         }
 
-        // -------------------------
-        // CASE 1: Direct order
-        // -------------------------
         if (!empty($data['items']) && is_array($data['items'])) {
             $totalPrice = 0;
             foreach ($data['items'] as &$item) {
@@ -84,10 +78,6 @@ class OrderController
 
             $orderId = $this->orderModel->create($orderData);
             $items = $data['items'];
-
-            // -------------------------
-            // CASE 2: Cart checkout
-            // -------------------------
         } elseif (!empty($data['cart_items']) && is_array($data['cart_items'])) {
             $cartItemIds = implode(',', array_map('intval', $data['cart_items']));
             $cartItems = $this->orderModel->getSelectedCartItems($userId, $cartItemIds);
@@ -129,9 +119,6 @@ class OrderController
         ];
     }
 
-    // -------------------------
-    // GET SINGLE ORDER
-    // -------------------------
     public function getOrder($request)
     {
         $userId = $request['userId'] ?? null;
@@ -160,9 +147,6 @@ class OrderController
         ];
     }
 
-    // -------------------------
-    // GET USER ORDERS
-    // -------------------------
     public function getUserOrders($request)
     {
         $userId = $request['userId'] ?? null;
