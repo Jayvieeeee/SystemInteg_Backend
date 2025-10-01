@@ -1,5 +1,6 @@
 <?php
-require_once 'AppException.php';
+require_once __DIR__ . '/AppException.php';
+
 
 class ConflictException extends AppException
 {

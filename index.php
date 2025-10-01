@@ -1,14 +1,14 @@
 <?php
 
-require_once "exceptions/AppException.php";
-require_once "exceptions/AuthException.php";
-require_once "exceptions/ValidationException.php";
-require_once "exceptions/NotFoundException.php";
-require_once "exceptions/ConflictException.php";
+require_once __DIR__ . '/exceptions/AppException.php';
+require_once __DIR__ . '/exceptions/AuthException.php';
+
+require_once __DIR__ . '/exceptions/ValidationException.php';
+require_once __DIR__ . '/exceptions/NotFoundException.php';
+require_once __DIR__ . '/exceptions/ConflictException.php';
 
 $container = require __DIR__ . '/init/Services.php';
-
-$routes = require "routes/api.php";
+$routes = require __DIR__ . '/routes/api.php';
 
 // Error response
 function sendErrorResponse($e)
@@ -39,6 +39,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = str_replace(dirname($_SERVER['SCRIPT_NAME']), '', $uri);
 $method = $_SERVER['REQUEST_METHOD'];
+
+// remove "/api" prefix para tumugma sa routes
+if (strpos($uri, '/api') === 0) {
+    $uri = substr($uri, 4); // tanggalin first 4 chars = "/api"
+}
 
 $rawInput = file_get_contents("php://input");
 $inputData = json_decode($rawInput, true) ?? [];
