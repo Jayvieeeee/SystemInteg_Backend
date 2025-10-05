@@ -5,7 +5,7 @@ require_once __DIR__ . "/../exceptions/AppException.php";
 
 class RateLimitMiddleware extends BaseMiddleware
 {
-    private $limit = 20;
+    private $limit = 50;
     private $window = 60; // time window in seconds
 
     public function handle($request)

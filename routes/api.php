@@ -15,6 +15,7 @@ return [
     ['path' => '/gallons',           'method' => 'POST',   'controller' => 'GallonController',  'action' => 'createGallon',      'auth' => true], // make true later
     ['path' => '/gallons/{id}',      'method' => 'PUT',    'controller' => 'GallonController',  'action' => 'updateGallon',      'auth' => true],
     ['path' => '/gallons/{id}',      'method' => 'DELETE', 'controller' => 'GallonController',  'action' => 'deleteGallon',      'auth' => true],
+    ['path' => '/images/{filename}', 'method' => 'GET', 'controller' => 'ImageController', 'action' => 'serveImage', 'auth' => true],
 
     // Orders
     ['path' => '/orders',            'method' => 'POST',   'controller' => 'OrderController',   'action' => 'createOrder',       'auth' => true],
@@ -30,5 +31,12 @@ return [
     ['path' => '/addresses/{id}/default', 'method' => 'POST', 'controller' => 'AddressController', 'action' => 'setDefaultAddress', 'auth' => true],
 
     ['path' => '/profile',        'method' => 'GET',  'controller' => 'ProfileController', 'action' => 'profile', 'auth' => true],
+
+
+    ['path' => '/cartItems', 'method' => 'GET', 'controller' => 'CartController', 'action' => 'getUserCart', 'auth' => true],
+    ['path' => '/cartItems', 'method' => 'POST', 'controller' => 'CartController', 'action' => 'addToCart', 'auth' => true],
+    ['path' => '/cartItems', 'method' => 'DELETE', 'controller' => 'CartController', 'action' => 'removeFromCart', 'auth' => true],
+    ['path' => '/cartItems/decrease', 'method' => 'PUT', 'controller' => 'CartController', 'action' => 'decreaseQuantity', 'auth' => true],
+    ['path' => '/cartItems/increase', 'method' => 'PUT', 'controller' => 'CartController', 'action' => 'increaseQuantity', 'auth' => true],
 
 ];

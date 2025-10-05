@@ -17,11 +17,24 @@ class UserModel
         return $stmt->get_result()->num_rows > 0;
     }
 
+    public function contactExists($contactNo)
+    {
+        $stmt = $this->conn->prepare(
+            "SELECT 1 FROM users WHERE contact_no = ? AND status = 'active'"
+        );
+        $stmt->bind_param("s", $contactNo);
+        $stmt->execute();
+        return $stmt->get_result()->num_rows > 0;
+    }
+
+
     public function create($data)
     {
         $stmt = $this->conn->prepare("INSERT INTO users
-            (first_name,last_name,email,contact_no,username,password,role,status,created_at,updated_at)
-            VALUES (?,?,?,?,?,?,?,1,NOW(),NOW())");
+    (first_name,last_name,email,contact_no,username,password,status,created_at,updated_at)
+    VALUES (?,?,?,?,?,?,?, NOW(), NOW())");
+
+        $status = 'active';
         $stmt->bind_param(
             "sssssss",
             $data['first_name'],
@@ -30,8 +43,9 @@ class UserModel
             $data['contact_no'],
             $data['username'],
             $data['password'],
-            $data['role']
+            $status
         );
+
         if (!$stmt->execute()) {
             throw new Exception("DB Insert failed: " . $stmt->error);
         }
@@ -39,6 +53,7 @@ class UserModel
         $user_id = $stmt->insert_id;
         return $this->findById($user_id);
     }
+
 
     public function findById($userId)
     {

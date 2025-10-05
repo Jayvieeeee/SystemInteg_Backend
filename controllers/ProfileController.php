@@ -16,7 +16,7 @@ class ProfileController
     {
         $authUser = $this->getAuthenticatedUser(); // get user_id from JWT
 
-        $user = $this->userModel->findById($authUser['id']);
+        $user = $this->userModel->findById($authUser['user_id']);
         if (!$user) {
             throw new NotFoundException("User not found", 404);
         }
@@ -33,17 +33,26 @@ class ProfileController
     {
         $headers = getallheaders();
         $authHeader = $headers['Authorization'] ?? '';
+
         if (!$authHeader || !str_starts_with($authHeader, 'Bearer ')) {
-            throw new AuthException("Unauthorized", 401);
+            throw new AuthException("Unauthorized: No token provided", 401);
         }
 
         $token = trim(str_replace('Bearer ', '', $authHeader));
 
         try {
             $decoded = JWT::decode($token, new Key(JWT_SECRET_KEY, 'HS256'));
-            return ['id' => $decoded->id, 'role' => $decoded->role];
+
+            if (!isset($decoded->user_id)) {
+                throw new AuthException("Invalid token payload: missing user_id", 401);
+            }
+
+            return [
+                'user_id' => $decoded->user_id,
+                'role' => $decoded->role
+            ];
         } catch (\Exception $e) {
-            throw new AuthException("Invalid token", 401);
+            throw new AuthException("Invalid or expired token", 401);
         }
     }
 }

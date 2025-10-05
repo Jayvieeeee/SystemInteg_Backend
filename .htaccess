@@ -1,15 +1,21 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /api/
-    
+
+    # Set Authorization header for PHP
     SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
-    
-    # Enable error display for debugging
-    php_flag display_errors on
+
+    # Disable error display for production
+    php_flag display_errors off
     php_flag log_errors on
     php_value error_reporting E_ALL
     php_value error_log "error_log.txt"
-    
+
+    # FIRST: Serve existing static files (images, CSS, JS) directly
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule \.(jpg|jpeg|png|gif|ico|css|js|webp|svg)$ - [L]
+
+    # SECOND: Route all other non-existing files/directories to the front controller
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [QSA,L]

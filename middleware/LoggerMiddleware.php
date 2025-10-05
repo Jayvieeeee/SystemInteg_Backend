@@ -8,7 +8,7 @@ class LoggerMiddleware extends BaseMiddleware
         $logFile = __DIR__ . "/../logs/app.log";
         $time = date("Y-m-d H:i:s");
         $method = $_SERVER['REQUEST_METHOD'] ?? 'CLI';
-        $uri = $_SERVER['REQUES_URI'] ?? 'N/A';
+        $uri = $_SERVER['REQUEST_URI'] ?? 'N/A';
 
         $safeRequest = $request;
 

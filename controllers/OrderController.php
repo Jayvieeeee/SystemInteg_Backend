@@ -4,21 +4,22 @@ class OrderController
 {
     private $orderModel;
     private $addressModel;
+    private $cartModel;
 
-    public function __construct(OrderModel $orderModel, AddressModel $addressModel)
+    public function __construct(OrderModel $orderModel, AddressModel $addressModel, CartModel $cartModel)
     {
         $this->orderModel = $orderModel;
         $this->addressModel = $addressModel;
+        $this->cartModel = $cartModel;
     }
 
-    public function createOrder($request)
+    public function createOrder($inputData, $userId)
     {
-        $data = $request; // $request contains input + injected userId
-        $userId = $request['userId'] ?? null;
-
         if (!$userId) {
             throw new AuthException("Unauthorized: missing userId");
         }
+
+        $data = $inputData;
 
         if (empty($data['pickup_datetime']) || empty($data['payment_method'])) {
             throw new ValidationException("Missing required fields: pickup_datetime, payment_method", 422);
@@ -43,8 +44,10 @@ class OrderController
             $addressDetails = $address;
         }
 
+        $items = [];
+        $totalPrice = 0;
+
         if (!empty($data['items']) && is_array($data['items'])) {
-            $totalPrice = 0;
             foreach ($data['items'] as &$item) {
                 if (empty($item['gallon_id']) || empty($item['quantity'])) {
                     throw new ValidationException("Each item must have gallon_id and quantity", 422);
@@ -62,9 +65,10 @@ class OrderController
                     throw new ValidationException("Quantity must be a positive integer", 422);
                 }
 
-                $item['price'] = $gallon['price'];
-                $item['total_price'] = $quantity * $gallon['price'];
+                $item['price'] = (float) $gallon['price'];
+                $item['total_price'] = (float) ($quantity * $gallon['price']);
                 $totalPrice += $item['total_price'];
+                $items[] = $item;
             }
 
             $orderData = [
@@ -72,12 +76,11 @@ class OrderController
                 'address_id' => $addressId,
                 'pickup_datetime' => $data['pickup_datetime'],
                 'payment_method' => $data['payment_method'],
-                'total_price' => $totalPrice,
-                'items' => $data['items']
+                'total_price' => (float) $totalPrice,
+                'items' => $items
             ];
 
             $orderId = $this->orderModel->create($orderData);
-            $items = $data['items'];
         } elseif (!empty($data['cart_items']) && is_array($data['cart_items'])) {
             $cartItemIds = implode(',', array_map('intval', $data['cart_items']));
             $cartItems = $this->orderModel->getSelectedCartItems($userId, $cartItemIds);
@@ -86,18 +89,25 @@ class OrderController
                 throw new ValidationException("Selected cart items not found", 422);
             }
 
-            $totalPrice = array_sum(array_column($cartItems, 'total_price'));
+            foreach ($cartItems as &$cartItem) {
+                $cartItem['price'] = (float) $cartItem['price'];
+                $cartItem['total_price'] = (float) $cartItem['total_price'];
+                $items[] = $cartItem;
+            }
+
+            $totalPrice = array_sum(array_column($items, 'total_price'));
 
             $orderData = [
                 'user_id' => $userId,
                 'address_id' => $addressId,
                 'pickup_datetime' => $data['pickup_datetime'],
                 'payment_method' => $data['payment_method'],
-                'total_price' => $totalPrice
+                'total_price' => (float) $totalPrice
             ];
 
-            $orderId = $this->orderModel->createFromCart($userId, $cartItems, $orderData);
-            $items = $cartItems;
+            $orderId = $this->orderModel->createFromCart($userId, $items, $orderData);
+
+            $this->cartModel->removeItems($userId, array_column($cartItems, 'cart_item_id'));
         } else {
             throw new ValidationException("Order must include items or cart_items", 422);
         }
@@ -106,7 +116,7 @@ class OrderController
             'success' => true,
             'message' => 'Order placed successfully',
             'order_id' => $orderId,
-            'total_price' => $totalPrice,
+            'total_price' => (float) $totalPrice,
             'order_summary' => [
                 'pickup_datetime' => $data['pickup_datetime'],
                 'payment_method' => $data['payment_method'],
@@ -121,7 +131,7 @@ class OrderController
 
     public function getOrder($request)
     {
-        $userId = $request['userId'] ?? null;
+        $userId = $request['user_id'] ?? null;
         $orderId = $request['order_id'] ?? null;
 
         if (!$userId) {
@@ -139,7 +149,13 @@ class OrderController
             throw new ValidationException("You are not authorized to view this order", 403);
         }
 
+        $order['total_price'] = (float) $order['total_price'];
         $order['items'] = $this->orderModel->getOrderItems($orderId);
+
+        foreach ($order['items'] as &$item) {
+            $item['price'] = (float) $item['price'];
+            $item['total_price'] = (float) $item['total_price'];
+        }
 
         return [
             'success' => true,
@@ -149,14 +165,20 @@ class OrderController
 
     public function getUserOrders($request)
     {
-        $userId = $request['userId'] ?? null;
+        $userId = $request['user_id'] ?? null;
         if (!$userId) {
-            throw new AuthException("Unauthorized: missing userId");
+            throw new AuthException("Unauthorized: missing user_id");
         }
 
         $orders = $this->orderModel->getOrdersByUserId($userId);
+
         foreach ($orders as &$order) {
+            $order['total_price'] = (float) $order['total_price'];
             $order['items'] = $this->orderModel->getOrderItems($order['order_id']);
+            foreach ($order['items'] as &$item) {
+                $item['price'] = (float) $item['price'];
+                $item['total_price'] = (float) $item['total_price'];
+            }
         }
 
         return [

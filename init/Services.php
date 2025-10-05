@@ -13,6 +13,7 @@ require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/GallonModel.php';
 require_once __DIR__ . '/../models/OrderModel.php';
 require_once __DIR__ . '/../models/AddressModel.php';
+require_once __DIR__ . '/../models/CartModel.php';
 
 
 // Controllers 
@@ -21,6 +22,8 @@ require_once __DIR__ . '/../controllers/GallonController.php';
 require_once __DIR__ . '/../controllers/OrderController.php';
 require_once __DIR__ . '/../controllers/AddressController.php';
 require_once __DIR__ . '/../controllers/ProfileController.php';
+require_once __DIR__ . '/../controllers/ImageController.php';
+require_once __DIR__ . '/../controllers/CartController.php';
 
 
 // Middlewares 
@@ -56,6 +59,7 @@ $container->set('userModel', fn($c, $params) => new UserModel($c->get('db')));
 $container->set('gallonModel', fn($c, $params) => new GallonModel($c->get('db')));
 $container->set('orderModel', fn($c, $params) => new OrderModel($c->get('db')));
 $container->set('addressModel', fn($c, $params) => new AddressModel($c->get('db')));
+$container->set('cartModel', fn($c, $params) => new CartModel($c->get('db')));
 
 //for EmailService to use
 $container->set('mailer', function ($c, $params) {
@@ -85,7 +89,8 @@ $container->set('loggerMiddleware', fn($c, $params) => new LoggerMiddleware());
 $container->set('corsMiddleware', fn($c, $params) => new CorsMiddleware());
 $container->set('rateLimitMiddleware', fn($c, $params) => new RateLimitMiddleware());
 $container->set('sanitizeMiddleware', fn($c, $params) => new SanitizeMiddleware());
-$container->set('validateMiddleware', fn($c, $params) => new ValidateMiddleware($params['fields'] ?? []));
+$container->set('validateMiddleware', fn($c, $params) => new ValidateMiddleware($params));
+
 $container->set('authMiddleware', fn($c, $params) => new AuthMiddleware());
 
 // Middleware Runner
@@ -109,13 +114,19 @@ $container->set('GallonController', fn($c, $params) => new GallonController(
 
 $container->set('OrderController', fn($c, $params) => new OrderController(
     $c->get('orderModel'),
-    $c->get('addressModel')
+    $c->get('addressModel'),
+    $c->get('cartModel')
 ));
 $container->set('AddressController', fn($c, $params) => new AddressController(
     $c->get('addressModel')
 ));
 $container->set('ProfileController', fn($c, $params) => new ProfileController(
     $c->get('userModel')
+));
+
+$container->set('ImageController', fn($c, $params) => new ImageController());
+$container->set('CartController', fn($c, $params) => new CartController(
+    $c->get('cartModel')
 ));
 
 

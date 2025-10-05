@@ -33,12 +33,13 @@ class AuthController
         $payload = [
             'iss' => 'my-app',
             'sub' => $user['user_id'],
-            'id' => $user['user_id'],
+            'user_id' => $user['user_id'], // 👈 add this!
             'role' => $user['role'],
             'iat' => time(),
             'exp' => time() + 3600,
-            'jti' => bin2hex(random_bytes(16)) // unique token ID
+            'jti' => bin2hex(random_bytes(16))
         ];
+
 
         $jwt = JWT::encode($payload, JWT_SECRET_KEY, 'HS256');
 
@@ -52,21 +53,35 @@ class AuthController
 
     public function register($data)
     {
+        // Check if email or username exists (active users only)
         if ($this->userModel->exists($data['email'], $data['username'])) {
             throw new ConflictException("Email or username already exists", 409);
         }
 
-        $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
-        $data['role'] = $data['role'] ?? 'customer';
-        $data['contact_no'] = $data['contact_no'] ?? '';
+        // Check if contact number already exists (active users only)
+        if ($this->userModel->contactExists($data['contact_no'])) {
+            throw new ConflictException("Contact number already exists", 409);
+        }
 
+        // Hash password
+        $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+
+        // Default role
+        $data['role'] = 'customer';
+
+        // Create user
         $user = $this->userModel->create($data);
 
         // Send welcome email
         $this->emailService->sendWelcomeEmail($user);
 
-        return ["error" => false, "message" => "Registration successful", "user" => $user];
+        return [
+            "error" => false,
+            "message" => "Registration successful",
+            "user" => $user
+        ];
     }
+
 
     public function forgotPassword($data)
     {
@@ -80,14 +95,12 @@ class AuthController
             throw new NotFoundException("User not found", 404);
         }
 
-        // generate 6-digit numeric code
         $code = random_int(100000, 999999);
         $exp = time() + 900; // 15 mins expiration
 
-        // save code and expiration to DB
         $this->userModel->saveResetCode($user['user_id'], $code, $exp);
 
-        // Send password reset email using EmailService
+
         $this->emailService->sendPasswordResetEmail($user, $code);
 
         return [
@@ -118,7 +131,7 @@ class AuthController
 
     public function resendResetCode($request)
     {
-        $userId = $request['userId'] ?? null; // ✅ galing sa token
+        $userId = $request['userId'] ?? null;
         if (!$userId) throw new AuthException("Unauthorized", 401);
 
         $user = $this->userModel->findById($userId);
@@ -167,7 +180,7 @@ class AuthController
 
     public function logout()
     {
-        // Sa JWT, walang server-side session kaya logout ay frontend responsibility
+
         return [
             'error' => false,
             'message' => 'Logout successful'

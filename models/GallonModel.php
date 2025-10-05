@@ -11,7 +11,7 @@ class GallonModel
     // Get all gallons
     public function getAll()
     {
-        $result = $this->conn->query("SELECT * FROM Gallons");
+        $result = $this->conn->query("SELECT * FROM gallons");
         $gallons = [];
         while ($row = $result->fetch_assoc()) {
             $gallons[] = $row;
@@ -22,16 +22,17 @@ class GallonModel
     // Get gallon by ID
     public function getById($id)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM Gallons WHERE gallon_id=?");
+        $stmt = $this->conn->prepare("SELECT * FROM gallons WHERE gallon_id=?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         return $stmt->get_result()->fetch_assoc();
     }
 
+
     // Create new gallon
     public function create($data)
     {
-        $stmt = $this->conn->prepare("INSERT INTO Gallons (name, image_url, size, price) VALUES (?, ?, ?, ?)");
+        $stmt = $this->conn->prepare("INSERT INTO gallons (name, image_url, size, price) VALUES (?, ?, ?, ?)");
         $stmt->bind_param("sssd", $data['name'], $data['image_url'], $data['size'], $data['price']);
         $stmt->execute();
         return ['success' => true, 'id' => $stmt->insert_id];
@@ -40,7 +41,7 @@ class GallonModel
     // Update gallon
     public function update($id, $data)
     {
-        $stmt = $this->conn->prepare("UPDATE Gallons SET name=?, image_url=?, size=?, price=? WHERE gallon_id=?");
+        $stmt = $this->conn->prepare("UPDATE gallons SET name=?, image_url=?, size=?, price=? WHERE gallon_id=?");
         $stmt->bind_param("sssdi", $data['name'], $data['image_url'], $data['size'], $data['price'], $id);
         $stmt->execute();
         return ['success' => true];
@@ -49,7 +50,7 @@ class GallonModel
     // Delete gallon
     public function delete($id)
     {
-        $stmt = $this->conn->prepare("DELETE FROM Gallons WHERE gallon_id=?");
+        $stmt = $this->conn->prepare("DELETE FROM gallons WHERE gallon_id=?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         return ['success' => true];

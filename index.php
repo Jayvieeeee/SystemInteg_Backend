@@ -1,8 +1,6 @@
 <?php
-
 require_once __DIR__ . '/exceptions/AppException.php';
 require_once __DIR__ . '/exceptions/AuthException.php';
-
 require_once __DIR__ . '/exceptions/ValidationException.php';
 require_once __DIR__ . '/exceptions/NotFoundException.php';
 require_once __DIR__ . '/exceptions/ConflictException.php';
@@ -29,7 +27,6 @@ header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-W
 header("Access-Control-Allow-Credentials: true");
 header("Content-Type: application/json; charset=UTF-8");
 
-
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
@@ -40,15 +37,13 @@ $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = str_replace(dirname($_SERVER['SCRIPT_NAME']), '', $uri);
 $method = $_SERVER['REQUEST_METHOD'];
 
-// remove "/api" prefix para tumugma sa routes
 if (strpos($uri, '/api') === 0) {
-    $uri = substr($uri, 4); // tanggalin first 4 chars = "/api"
+    $uri = substr($uri, 4); // remove 4 chars = "/api"
 }
 
 $rawInput = file_get_contents("php://input");
 $inputData = json_decode($rawInput, true) ?? [];
 
-// Middleware runner
 $runner = $container->get('middlewareRunner');
 
 try {
@@ -56,7 +51,7 @@ try {
     $params = [];
 
     foreach ($routes as $route) {
-        // convert {id} into regex
+
         $pattern = "@^" . preg_replace('/\{[^}]+\}/', '([^/]+)', $route['path']) . "$@";
         if ($method === $route['method'] && preg_match($pattern, $uri, $matches)) {
             array_shift($matches); // remove full match
@@ -70,10 +65,8 @@ try {
         throw new NotFoundException("Route not found: $uri");
     }
 
-    // CORS middleware to the runner for all requests
     $runner->add($container->get('corsMiddleware'));
 
-    // Route-specific middleware: Auth
     if (!empty($matched['auth'])) {
         $runner->add($container->get('authMiddleware'));
     }
@@ -85,10 +78,13 @@ try {
         } elseif ($matched['action'] === 'login') {
             $fields = ['identifier' => 'Username or email', 'password' => 'Password'];
         }
-        $runner->add($container->get('validateMiddleware', ['fields' => $fields]));
+
+        $runner->add($container->get('validateMiddleware', [
+            'fields' => $fields,
+            'route'  => $matched['action']
+        ]));
     }
 
-    // Add validation for Gallon POST/PUT
     if (in_array($matched['action'], ['createGallon', 'updateGallon'])) {
         $fields = ['name', 'image_url', 'size', 'price'];
         $runner->add($container->get('validateMiddleware', ['fields' => $fields]));
@@ -96,7 +92,7 @@ try {
 
     $request = $runner->run($inputData);
 
-    $userId = $request['userId'] ?? null;
+    $userId = $request['user_id'] ?? null;
 
     // Call controller + action
     $controllerName = $matched['controller'];
@@ -106,40 +102,35 @@ try {
         throw new NotFoundException("Controller not found: $controllerName");
     }
 
-    // instantiate controller via container
     $controller = $container->get($controllerName);
-
     $params = $matched['params'] ?? [];
     $params = is_array($params) ? $params : [];
 
     switch ($actionName) {
         case 'createAddress':
-            $result = $controller->$actionName($inputData, $userId, ...$params);
+            $result = $controller->$actionName($request, $userId, ...$params);
             break;
 
         case 'updateAddress':
-            error_log("updateAddress - URI: " . $uri);
-            error_log("updateAddress - Params: " . print_r($params, true));
-            error_log("updateAddress - Params count: " . count($params));
-
-            // If no parameters extracted, try manual fallback
             if (empty($params)) {
                 $parts = explode('/', $uri);
                 $addressId = end($parts);
-                error_log("updateAddress - Manually extracted ID: " . $addressId);
-                $result = $controller->updateAddress($inputData, $addressId, $userId);
+                $result = $controller->updateAddress($request, $addressId, $userId);
             } else {
-                $result = $controller->updateAddress($inputData, $params[0] ?? null, $userId);
+                $result = $controller->updateAddress($request, $params[0] ?? null, $userId);
             }
             break;
+
         case 'deleteAddress':
         case 'setDefaultAddress':
         case 'getUserAddresses':
             $result = $controller->$actionName($userId, ...$params);
             break;
+
         case 'createOrder':
-            $result = $controller->$actionName($request, ...$params);
+            $result = $controller->$actionName($request, $userId);
             break;
+
         case 'getAddress':
             if (empty($params)) {
                 $parts = explode('/', $uri);
@@ -149,8 +140,10 @@ try {
                 $result = $controller->getAddress($params[0] ?? null, $userId);
             }
             break;
+
         default:
-            $result = $controller->$actionName($inputData, ...$params);
+            // Pass the enriched request instead of just inputData
+            $result = $controller->$actionName($request, ...$params);
             break;
     }
 
