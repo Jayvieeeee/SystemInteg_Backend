@@ -1,0 +1,7 @@
+[06-Oct-2025 16:46:48 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'u465107535_root'@'localhost' (using password: YES) in C:\xampp\htdocs\sismoya\config\db.php:5
+Stack trace:
+#0 C:\xampp\htdocs\sismoya\config\db.php(5): mysqli_connect('localhost', 'u465107535_root', Object(SensitiveParameterValue), 'u465107535_sism...')
+#1 C:\xampp\htdocs\sismoya\init\Services.php(5): require_once('C:\\xampp\\htdocs...')
+#2 C:\xampp\htdocs\sismoya\index.php(8): require('C:\\xampp\\htdocs...')
+#3 {main}
+  thrown in C:\xampp\htdocs\sismoya\config\db.php on line 5

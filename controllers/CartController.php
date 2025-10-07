@@ -32,7 +32,7 @@ class CartController
     public function addToCart($request)
     {
         $userId = $request['user_id'] ?? null;
-        $gallonId = $request['gallonId'] ?? null;
+        $gallonId = $request['gallon_id'] ?? null;
         $quantity = $request['quantity'] ?? 1;
 
         if (!$userId) throw new AuthException("Unauthorized: missing userId");

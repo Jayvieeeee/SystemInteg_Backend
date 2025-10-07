@@ -33,7 +33,7 @@ class AuthController
         $payload = [
             'iss' => 'my-app',
             'sub' => $user['user_id'],
-            'user_id' => $user['user_id'], // 👈 add this!
+            'user_id' => $user['user_id'],
             'role' => $user['role'],
             'iat' => time(),
             'exp' => time() + 3600,

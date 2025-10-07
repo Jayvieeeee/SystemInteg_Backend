@@ -39,4 +39,9 @@ return [
     ['path' => '/cartItems/decrease', 'method' => 'PUT', 'controller' => 'CartController', 'action' => 'decreaseQuantity', 'auth' => true],
     ['path' => '/cartItems/increase', 'method' => 'PUT', 'controller' => 'CartController', 'action' => 'increaseQuantity', 'auth' => true],
 
+    // Dashboard stats
+    ['path' => '/orders/stats', 'method' => 'GET', 'controller' => 'OrderController', 'action' => 'getOrderStats', 'auth' => true],
+    ['path' => '/orders/latest', 'method' => 'GET', 'controller' => 'OrderController', 'action' => 'getLatestOrders', 'auth' => true],
+
+
 ];

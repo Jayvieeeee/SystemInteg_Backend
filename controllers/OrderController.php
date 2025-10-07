@@ -138,7 +138,7 @@ class OrderController
             throw new AuthException("Unauthorized: missing userId");
         }
         if (!$orderId) {
-            throw new ValidationException("Missing order_id", 422);
+            throw new ValidationException("Missing TRY order_id", 422);
         }
 
         $order = $this->orderModel->getById($orderId);
@@ -146,7 +146,7 @@ class OrderController
             throw new NotFoundException("Order not found", 404);
         }
         if ($order['user_id'] != $userId) {
-            throw new ValidationException("You are not authorized to view this order", 403);
+            throw new AuthException("You are not authorized to view this order", 403);
         }
 
         $order['total_price'] = (float) $order['total_price'];
@@ -185,6 +185,30 @@ class OrderController
             'success' => true,
             'orders' => $orders,
             'count' => count($orders)
+        ];
+    }
+
+    public function getOrderStats($request)
+    {
+        $userId = $request['user_id'] ?? null;
+        if (!$userId) {
+            throw new AuthException("Unauthorized: missing user_id");
+        }
+
+        $stats = $this->orderModel->getOrderStatsByUser($userId); // make sure it filters by user_id
+        return [
+            'success' => true,
+            'data' => $stats
+        ];
+    }
+
+
+    public function getLatestOrders()
+    {
+        $orders = $this->orderModel->getLatestOrders(5);
+        return [
+            'success' => true,
+            'data' => $orders
         ];
     }
 }

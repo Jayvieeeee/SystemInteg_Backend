@@ -22,19 +22,22 @@ class CartModel
         return $result->fetch_all(MYSQLI_ASSOC);
     }
 
-    // Add or update cart item
+    // Add or update cart item - FIXED VERSION
     public function addToCart($userId, $gallonId, $quantity = 1)
     {
         // Check if item already exists in cart
-        $stmt = $this->conn->prepare("SELECT quantity FROM cart_items WHERE user_id = ? AND gallon_id = ?");
+        $stmt = $this->conn->prepare("SELECT cart_item_id, quantity FROM cart_items WHERE user_id = ? AND gallon_id = ?");
         $stmt->bind_param("ii", $userId, $gallonId);
         $stmt->execute();
         $result = $stmt->get_result();
 
         if ($result->num_rows > 0) {
-            // Update quantity (replace or add, here we replace)
+            // ✅ FIXED: ADD to existing quantity instead of replacing
+            $existingItem = $result->fetch_assoc();
+            $newQuantity = $existingItem['quantity'] + $quantity;
+
             $update = $this->conn->prepare("UPDATE cart_items SET quantity = ? WHERE user_id = ? AND gallon_id = ?");
-            $update->bind_param("iii", $quantity, $userId, $gallonId);
+            $update->bind_param("iii", $newQuantity, $userId, $gallonId);
             $update->execute();
         } else {
             // Insert new item

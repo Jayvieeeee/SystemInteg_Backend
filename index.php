@@ -142,7 +142,6 @@ try {
             break;
 
         default:
-            // Pass the enriched request instead of just inputData
             $result = $controller->$actionName($request, ...$params);
             break;
     }

@@ -14,7 +14,6 @@ class OrderModel
     {
         $this->conn->begin_transaction();
         try {
-            // Insert into orders
             $stmt = $this->conn->prepare("
                 INSERT INTO orders (user_id, address_id, pickup_datetime, payment_method, total_price)
                 VALUES (?, ?, ?, ?, ?)
@@ -31,7 +30,6 @@ class OrderModel
             $orderId = $this->conn->insert_id;
             $stmt->close();
 
-            // Insert order items
             $stmtItem = $this->conn->prepare("
                 INSERT INTO order_items (order_id, gallon_id, quantity, price, total_price)
                 VALUES (?, ?, ?, ?, ?)
@@ -242,5 +240,71 @@ class OrderModel
         $stmt->close();
 
         return !empty($result);
+    }
+
+    public function getOrderStats()
+    {
+        $stats = [];
+
+        // Pending Orders
+        $query = "SELECT COUNT(*) as count FROM orders WHERE status = 'pending'";
+        $stats['pending'] = $this->conn->query($query)->fetch_assoc()['count'];
+
+        // Completed Orders
+        $query = "SELECT COUNT(*) as count FROM orders WHERE status = 'completed'";
+        $stats['completed'] = $this->conn->query($query)->fetch_assoc()['count'];
+
+        // Cancelled Orders
+        $query = "SELECT COUNT(*) as count FROM orders WHERE status = 'cancelled'";
+        $stats['cancelled'] = $this->conn->query($query)->fetch_assoc()['count'];
+
+        // Total Orders
+        $query = "SELECT COUNT(*) as count FROM orders";
+        $stats['total'] = $this->conn->query($query)->fetch_assoc()['count'];
+
+        return $stats;
+    }
+
+    public function getOrderStatsByUser($userId)
+    {
+        $sql = "SELECT 
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
+                COUNT(*) AS total
+            FROM orders
+            WHERE user_id = ?";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+
+        // convert nulls to 0
+        return [
+            'pending' => (int) ($result['pending'] ?? 0),
+            'completed' => (int) ($result['completed'] ?? 0),
+            'cancelled' => (int) ($result['cancelled'] ?? 0),
+            'total' => (int) ($result['total'] ?? 0)
+        ];
+    }
+
+
+    public function getLatestOrders($limit = 5)
+    {
+        $query = "SELECT o.id, o.total_amount, o.status, o.created_at,
+                     GROUP_CONCAT(CONCAT(g.name, ' ', oi.quantity, 'x') SEPARATOR ', ') as order_items
+              FROM orders o
+              JOIN order_items oi ON o.id = oi.order_id
+              JOIN gallons g ON oi.gallon_id = g.id
+              GROUP BY o.id
+              ORDER BY o.created_at DESC
+              LIMIT ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        return $result->fetch_all(MYSQLI_ASSOC);
     }
 }
