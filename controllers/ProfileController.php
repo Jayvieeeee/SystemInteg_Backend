@@ -55,4 +55,52 @@ class ProfileController
             throw new AuthException("Invalid or expired token", 401);
         }
     }
+
+    public function updateProfile()
+    {
+        $authUser = $this->getAuthenticatedUser();
+        $rawInput = file_get_contents("php://input");
+        $inputData = json_decode($rawInput, true);
+
+        if (!$inputData) {
+            throw new ValidationException("Invalid JSON input", 422);
+        }
+
+        $allowedFields = ['first_name', 'last_name', 'email', 'contact_no'];
+        $updateData = [];
+        $updatedFields = [];
+
+        foreach ($allowedFields as $field) {
+            if (isset($inputData[$field])) {
+                $value = trim($inputData[$field]);
+
+                // simple validation
+                if ($field === 'email' && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                    throw new ValidationException("Invalid email format", 422);
+                }
+                if (empty($value)) {
+                    throw new ValidationException(ucfirst(str_replace("_", " ", $field)) . " cannot be empty", 422);
+                }
+
+                $updateData[$field] = $value;
+                $updatedFields[] = $field;
+            }
+        }
+
+        if (empty($updateData)) {
+            throw new ValidationException("No valid fields to update", 422);
+        }
+
+        $updated = $this->userModel->updateProfile($authUser['user_id'], $updateData);
+
+        if (!$updated) {
+            throw new AppException("Failed to update " . implode(", ", $updatedFields), 400);
+        }
+
+        return [
+            'error' => false,
+            'message' => ucfirst(str_replace("_", " ", implode(", ", $updatedFields))) . " updated successfully",
+            'updated_fields' => $updatedFields
+        ];
+    }
 }

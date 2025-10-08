@@ -31,6 +31,7 @@ return [
     ['path' => '/addresses/{id}/default', 'method' => 'POST', 'controller' => 'AddressController', 'action' => 'setDefaultAddress', 'auth' => true],
 
     ['path' => '/profile',        'method' => 'GET',  'controller' => 'ProfileController', 'action' => 'profile', 'auth' => true],
+    ['path' => '/profile', 'method' => 'PUT', 'controller' => 'ProfileController', 'action' => 'updateProfile', 'auth' => true],
 
 
     ['path' => '/cartItems', 'method' => 'GET', 'controller' => 'CartController', 'action' => 'getUserCart', 'auth' => true],

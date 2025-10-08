@@ -145,4 +145,31 @@ class UserModel
             throw new Exception("Failed to update password: " . $stmt->error);
         }
     }
+
+    public function updateProfile($userId, $data)
+    {
+        $fields = [];
+        $params = [];
+        $types = "";
+
+        foreach ($data as $key => $value) {
+            $fields[] = "$key = ?";
+            $params[] = $value;
+            $types .= "s"; // assume all string except id
+        }
+
+        if (empty($fields)) {
+            return false;
+        }
+
+        $sql = "UPDATE users SET " . implode(", ", $fields) . " WHERE user_id = ?";
+        $params[] = $userId;
+        $types .= "i";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+
+        return $stmt->affected_rows > 0;
+    }
 }
