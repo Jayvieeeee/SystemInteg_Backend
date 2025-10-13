@@ -103,4 +103,47 @@ class ProfileController
             'updated_fields' => $updatedFields
         ];
     }
+
+    public function changePassword()
+    {
+        $authUser = $this->getAuthenticatedUser();
+        $rawInput = file_get_contents("php://input");
+        $inputData = json_decode($rawInput, true);
+
+        if (!$inputData) {
+            throw new ValidationException("Invalid JSON input", 422);
+        }
+
+        // Required fields
+        $oldPassword = $inputData['old_password'] ?? '';
+        $newPassword = $inputData['new_password'] ?? '';
+        $confirmPassword = $inputData['confirm_password'] ?? '';
+
+        if (empty($oldPassword) || empty($newPassword) || empty($confirmPassword)) {
+            throw new ValidationException("All password fields are required", 422);
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            throw new ValidationException("New passwords do not match", 422);
+        }
+
+        // Check old password
+        $user = $this->userModel->findByIdWithPassword($authUser['user_id']);
+        if (!$user || !password_verify($oldPassword, $user['password'])) {
+            throw new ValidationException("Old password is incorrect", 422);
+        }
+
+        // Hash new password and update
+        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+        $updated = $this->userModel->changePassword($authUser['user_id'], $hashedPassword);
+
+        if (!$updated) {
+            throw new AppException("Failed to change password", 500);
+        }
+
+        return [
+            'error' => false,
+            'message' => 'Password changed successfully'
+        ];
+    }
 }

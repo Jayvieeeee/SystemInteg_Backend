@@ -6,6 +6,7 @@ require_once __DIR__ . '/../config/db.php';
 
 // Services
 require_once __DIR__ . '/../services/EmailService.php';
+require_once __DIR__ . '/../services/PaypalService.php';
 
 
 // Models
@@ -24,6 +25,7 @@ require_once __DIR__ . '/../controllers/AddressController.php';
 require_once __DIR__ . '/../controllers/ProfileController.php';
 require_once __DIR__ . '/../controllers/ImageController.php';
 require_once __DIR__ . '/../controllers/CartController.php';
+require_once __DIR__ . '/../controllers/PaypalController.php';
 
 
 // Middlewares 
@@ -83,6 +85,7 @@ $container->set('mailer', function ($c, $params) {
 
 // Email Service
 $container->set('emailService', fn($c, $params) => new EmailService($c->get('mailer')));
+$container->set('paypalService', fn($c, $params) => new PaypalService());
 
 // Middlewares
 $container->set('loggerMiddleware', fn($c, $params) => new LoggerMiddleware());
@@ -128,6 +131,12 @@ $container->set('ImageController', fn($c, $params) => new ImageController());
 $container->set('CartController', fn($c, $params) => new CartController(
     $c->get('cartModel')
 ));
+$container->set('PaypalController', fn($c, $params) => new PaypalController(
+    $c->get('orderModel'),
+    $c->get('paypalService')
+));
+
+
 
 
 

@@ -31,7 +31,8 @@ return [
     ['path' => '/addresses/{id}/default', 'method' => 'POST', 'controller' => 'AddressController', 'action' => 'setDefaultAddress', 'auth' => true],
 
     ['path' => '/profile',        'method' => 'GET',  'controller' => 'ProfileController', 'action' => 'profile', 'auth' => true],
-    ['path' => '/profile', 'method' => 'PUT', 'controller' => 'ProfileController', 'action' => 'updateProfile', 'auth' => true],
+    ['path' => '/update-profile', 'method' => 'PUT', 'controller' => 'ProfileController', 'action' => 'updateProfile', 'auth' => true],
+    ['path' => '/change-password', 'method' => 'PUT', 'controller' => 'ProfileController', 'action' => 'changePassword', 'auth' => true],
 
 
     ['path' => '/cartItems', 'method' => 'GET', 'controller' => 'CartController', 'action' => 'getUserCart', 'auth' => true],
@@ -44,5 +45,9 @@ return [
     ['path' => '/orders/stats', 'method' => 'GET', 'controller' => 'OrderController', 'action' => 'getOrderStats', 'auth' => true],
     ['path' => '/orders/latest', 'method' => 'GET', 'controller' => 'OrderController', 'action' => 'getLatestOrders', 'auth' => true],
 
+    // PayPal Payment
+    ['path' => '/orders/paypal/confirm', 'method' => 'GET', 'controller' => 'PaypalController', 'action' => 'confirm', 'auth' => false],
+    ['path' => '/orders/paypal/cancel',  'method' => 'GET', 'controller' => 'PaypalController', 'action' => 'cancel',  'auth' => false],
 
+    ['path' => '/dashboard/stats', 'method' => 'GET', 'controller' => 'AdminDashboardController', 'action' => 'getDashboardStats', 'auth' => true],
 ];

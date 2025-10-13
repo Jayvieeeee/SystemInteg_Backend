@@ -130,8 +130,10 @@ class ValidateMiddleware extends BaseMiddleware
                 $request[$field] = strtolower($username);
             }
 
-            // ✅ Apply password rules only if register route
-            if ($field === 'password' && $this->route === 'register') {
+            if (
+                ($field === 'password' && $this->route === 'register') ||
+                ($field === 'new_password' && $this->route === 'change-password')
+            ) {
                 $password = $request[$field];
                 $errors = [];
 

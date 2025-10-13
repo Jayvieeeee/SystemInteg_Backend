@@ -68,6 +68,15 @@ class UserModel
         return $user;
     }
 
+    public function findByIdWithPassword($userId)
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM users WHERE user_id=?");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_assoc(); // DO NOT REMOVE password here
+    }
+
+
     public function findByEmailUsername($value)
     {
         $stmt = $this->conn->prepare("SELECT * FROM users WHERE email=? OR username=?");
@@ -171,5 +180,13 @@ class UserModel
         $stmt->execute();
 
         return $stmt->affected_rows > 0;
+    }
+
+    public function changePassword($userId, $newPassword)
+    {
+        $stmt = $this->conn->prepare("UPDATE users SET password = ? WHERE user_id = ?");
+        $stmt->bind_param("si", $newPassword, $userId);
+
+        return $stmt->execute();
     }
 }

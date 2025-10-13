@@ -112,6 +112,22 @@ class OrderController
             throw new ValidationException("Order must include items or cart_items", 422);
         }
 
+        if ($data['payment_method'] == 'paypal') {
+            $paypalService = new PayPalService();
+            $paypalOrder = $paypalService->createOrder($orderId, $totalPrice);
+
+            return [
+                'success' => true,
+                'message' => 'PayPal order created, proceed with payment',
+                'order_id' => $orderId,
+                'total_price' => (float) $totalPrice,
+                'paypal' => [
+                    'approve_link' => $paypalOrder['approve_link'],  // ✅ now valid
+                    'paypal_order_id' => $paypalOrder['id']           // ✅ now valid
+                ]
+            ];
+        }
+
         return [
             'success' => true,
             'message' => 'Order placed successfully',

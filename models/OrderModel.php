@@ -307,4 +307,13 @@ class OrderModel
 
         return $result->fetch_all(MYSQLI_ASSOC);
     }
+
+    public function updatePaymentStatus($orderId, $status, $paymentMethod)
+    {
+        $query = "UPDATE orders SET payment_status = ?, payment_method = ? WHERE id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("ssi", $status, $paymentMethod, $orderId);
+
+        return $stmt->execute();
+    }
 }

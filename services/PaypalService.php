@@ -1,17 +1,26 @@
 <?php
-class PayPalService {
+class PayPalService
+{
     private $clientId;
     private $secret;
     private $baseUrl;
 
-    public function __construct() {
-        $this->clientId = PAYPAL_CLIENT_ID;
-        $this->secret = PAYPAL_SECRET;
-        $this->baseUrl = PAYPAL_BASE_URL;
+    public function __construct()
+    {
+        // load config file
+        $config = include __DIR__ . '/../config/paypal.php'; // path sa config file
+        if (!is_array($config)) {
+            throw new Exception("PayPal config not loaded properly.");
+        }
+
+        $this->clientId = $config['client_id'];
+        $this->secret = $config['secret'];
+        $this->baseUrl = $config['base_url'];
     }
 
     // 1. Generate Access Token
-    public function getAccessToken() {
+    public function getAccessToken()
+    {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->baseUrl . "/v1/oauth2/token");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -34,62 +43,85 @@ class PayPalService {
         return $json['access_token'] ?? null;
     }
 
-    // 2. Create Order
-    public function createOrder($amount) {
-        $token = $this->getAccessToken();
+    public function createOrder($orderId, $amount)
+    {
+        $accessToken = $this->getAccessToken();
 
         $data = [
             "intent" => "CAPTURE",
             "purchase_units" => [[
+                "reference_id" => $orderId,
                 "amount" => [
                     "currency_code" => "USD",
-                    "value" => $amount
+                    "value" => number_format($amount / 56, 2) // Convert PHP → USD
                 ]
-            ]]
+            ]],
+            "application_context" => [
+                "return_url" => "http://localhost/test/orders/paypal/confirm",
+                "cancel_url" => "http://localhost/test/orders/paypal/cancel"
+            ]
         ];
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->baseUrl . "/v2/checkout/orders");
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-
-        $headers = [
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
             "Content-Type: application/json",
-            "Authorization: Bearer " . $token
-        ];
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            "Authorization: Bearer $accessToken"
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
         $result = curl_exec($ch);
         if (curl_errno($ch)) {
-            throw new Exception('Error: ' . curl_error($ch));
+            throw new Exception('PayPal create order error: ' . curl_error($ch));
         }
         curl_close($ch);
 
-        return json_decode($result, true);
+        // decode JSON result
+        $paypalResponse = json_decode($result, true);
+
+        $approveLink = null;
+        $paypalOrderId = $paypalResponse['id'] ?? null;
+
+        if (isset($paypalResponse['links']) && is_array($paypalResponse['links'])) {
+            foreach ($paypalResponse['links'] as $link) {
+                if ($link['rel'] === 'approve') {
+                    $approveLink = $link['href'];
+                    break;
+                }
+            }
+        }
+
+        return [
+            'id' => $paypalOrderId,
+            'approve_link' => $approveLink
+        ];
     }
 
-    // 3. Capture Order
-    public function captureOrder($orderId) {
-        $token = $this->getAccessToken();
+    public function capturePayment($paypalOrderId)
+    {
+        $url = $this->baseUrl . "/v2/checkout/orders/{$paypalOrderId}/capture";
+
+        $accessToken = $this->getAccessToken(); // reuse token generator
 
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $this->baseUrl . "/v2/checkout/orders/" . $orderId . "/capture");
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => [
+                "Content-Type: application/json",
+                "Authorization: Bearer $accessToken"
+            ],
+            CURLOPT_RETURNTRANSFER => true
+        ]);
 
-        $headers = [
-            "Content-Type: application/json",
-            "Authorization: Bearer " . $token
-        ];
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        $result = curl_exec($ch);
+        $response = curl_exec($ch);
         if (curl_errno($ch)) {
-            throw new Exception('Error: ' . curl_error($ch));
+            throw new Exception('PayPal capture error: ' . curl_error($ch));
         }
         curl_close($ch);
 
-        return json_decode($result, true);
+        return json_decode($response, true);
     }
 }
