@@ -57,8 +57,8 @@ class PayPalService
                 ]
             ]],
             "application_context" => [
-                "return_url" => "http://localhost/test/orders/paypal/confirm",
-                "cancel_url" => "http://localhost/test/orders/paypal/cancel"
+                "return_url" => "http://sismoya.bsit3b.site/orders/paypal/confirm",
+                "cancel_url" => "http://sismoya.bsit3b.site/orders/paypal/cancel"
             ]
         ];
 

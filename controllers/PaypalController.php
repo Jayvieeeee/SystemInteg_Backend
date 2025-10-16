@@ -26,14 +26,14 @@ class PaypalController
             }
 
             // Create PayPal order
-            $paypalOrder = $this->paypalService->createOrder($orderId, $order['total_amount']);
+            $paypalOrder = $this->paypalService->createOrder($orderId, $order['total_price']);
 
             // ✅ Return array, same format as OrderController
             return [
                 'success' => true,
                 'message' => 'PayPal order created successfully',
                 'order_id' => $orderId,
-                'total_amount' => (float) $order['total_amount'],
+                'total_amount' => (float) $order['total_price'],
                 'paypal' => [
                     'approve_link' => $paypalOrder['approve_link'],
                     'paypal_order_id' => $paypalOrder['id']
