@@ -52,15 +52,16 @@ class PayPalService
             "purchase_units" => [[
                 "reference_id" => $orderId,
                 "amount" => [
-                    "currency_code" => "USD",
-                    "value" => number_format($amount / 56, 2) // Convert PHP → USD
+                    "currency_code" => "PHP",
+                    "value" => number_format($amount, 2, '.', '')
                 ]
             ]],
             "application_context" => [
-                "return_url" => "http://sismoya.bsit3b.site/orders/paypal/confirm",
-                "cancel_url" => "http://sismoya.bsit3b.site/orders/paypal/cancel"
+                "return_url" => "https://sismoya.bsit3b.site/payment-success",
+                "cancel_url" => "https://sismoya.bsit3b.site/payment-cancel"
             ]
         ];
+
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->baseUrl . "/v2/checkout/orders");

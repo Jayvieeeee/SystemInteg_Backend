@@ -310,7 +310,7 @@ class OrderModel
 
     public function updatePaymentStatus($orderId, $status, $paymentMethod)
     {
-        $query = "UPDATE orders SET payment_status = ?, payment_method = ? WHERE id = ?";
+        $query = "UPDATE orders SET payment_status = ?, payment_method = ? WHERE order_id = ?";
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param("ssi", $status, $paymentMethod, $orderId);
 

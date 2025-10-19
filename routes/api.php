@@ -46,7 +46,7 @@ return [
     ['path' => '/orders/latest', 'method' => 'GET', 'controller' => 'OrderController', 'action' => 'getLatestOrders', 'auth' => true],
 
     // PayPal Payment
-    ['path' => '/orders/paypal/create',  'method' => 'POST', 'controller' => 'PaypalController', 'action' => 'create',  'auth' => true],
-    ['path' => '/orders/paypal/confirm', 'method' => 'GET', 'controller' => 'PaypalController', 'action' => 'confirm', 'auth' => true],
-    ['path' => '/orders/paypal/cancel',  'method' => 'GET', 'controller' => 'PaypalController', 'action' => 'cancel',  'auth' => true],
+    ['path' => '/orders/paypal/create',  'method' => 'POST', 'controller' => 'PaypalController', 'action' => 'create',  'auth' => false],
+    ['path' => '/orders/paypal/confirm', 'method' => 'GET', 'controller' => 'PaypalController', 'action' => 'confirm', 'auth' => false],
+    ['path' => '/orders/paypal/cancel',  'method' => 'GET', 'controller' => 'PaypalController', 'action' => 'cancel',  'auth' => false],
 ];
