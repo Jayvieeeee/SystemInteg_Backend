@@ -13,13 +13,10 @@ class OrderController
         $this->cartModel = $cartModel;
     }
 
-    public function createOrder($inputData, $userId)
+    // POST /orders
+    public function createOrder($request, $userId)
     {
-        if (!$userId) {
-            throw new AuthException("Unauthorized: missing userId");
-        }
-
-        $data = $inputData;
+        $data = $request;
 
         if (empty($data['pickup_datetime']) || empty($data['payment_method'])) {
             throw new ValidationException("Missing required fields: pickup_datetime, payment_method", 422);
@@ -122,8 +119,8 @@ class OrderController
                 'order_id' => $orderId,
                 'total_price' => (float) $totalPrice,
                 'paypal' => [
-                    'approve_link' => $paypalOrder['approve_link'],  // ✅ now valid
-                    'paypal_order_id' => $paypalOrder['id']           // ✅ now valid
+                    'approve_link' => $paypalOrder['approve_link'],
+                    'paypal_order_id' => $paypalOrder['id']
                 ]
             ];
         }
@@ -145,18 +142,9 @@ class OrderController
         ];
     }
 
-    public function getOrder($request)
+    // GET /orders/{id}
+    public function getOrder($userId, $orderId)
     {
-        $userId = $request['user_id'] ?? null;
-        $orderId = $request['order_id'] ?? null;
-
-        if (!$userId) {
-            throw new AuthException("Unauthorized: missing userId");
-        }
-        if (!$orderId) {
-            throw new ValidationException("Missing TRY order_id", 422);
-        }
-
         $order = $this->orderModel->getById($orderId);
         if (!$order) {
             throw new NotFoundException("Order not found", 404);
@@ -179,13 +167,9 @@ class OrderController
         ];
     }
 
-    public function getUserOrders($request)
+    // GET /orders
+    public function getUserOrders($userId)
     {
-        $userId = $request['user_id'] ?? null;
-        if (!$userId) {
-            throw new AuthException("Unauthorized: missing user_id");
-        }
-
         $orders = $this->orderModel->getOrdersByUserId($userId);
 
         foreach ($orders as &$order) {
@@ -204,20 +188,15 @@ class OrderController
         ];
     }
 
-    public function getOrderStats($request)
+    // GET /orders/stats
+    public function getOrderStats($userId)
     {
-        $userId = $request['user_id'] ?? null;
-        if (!$userId) {
-            throw new AuthException("Unauthorized: missing user_id");
-        }
-
-        $stats = $this->orderModel->getOrderStatsByUser($userId); // make sure it filters by user_id
+        $stats = $this->orderModel->getOrderStatsByUser($userId);
         return [
             'success' => true,
             'data' => $stats
         ];
     }
-
 
     public function getLatestOrders()
     {

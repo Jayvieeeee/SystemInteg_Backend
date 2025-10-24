@@ -8,10 +8,9 @@ class CartController
         $this->cartModel = $cartModel;
     }
 
-    public function getUserCart($request)
+    // GET /cartItems - No $request needed, just $userId
+    public function getUserCart($userId)
     {
-        $userId = $request['user_id'] ?? null;
-
         if (!$userId) {
             return [
                 'success' => false,
@@ -28,10 +27,9 @@ class CartController
         ];
     }
 
-    // Add or update cart item
-    public function addToCart($request)
+    // POST /cartItems - Needs $request and $userId
+    public function addToCart($request, $userId)
     {
-        $userId = $request['user_id'] ?? null;
         $gallonId = $request['gallon_id'] ?? null;
         $quantity = $request['quantity'] ?? 1;
 
@@ -47,10 +45,9 @@ class CartController
         ];
     }
 
-    // DELETE CART ITEM - completely remove from cart (for delete button)
-    public function removeFromCart($request)
+    // DELETE /cartItems - Needs $request and $userId
+    public function removeFromCart($request, $userId)
     {
-        $userId = $request['user_id'] ?? null;
         $cartItemIds = $request['cart_item_ids'] ?? [];
 
         if (!$userId) throw new AuthException("Unauthorized: missing userId");
@@ -67,9 +64,9 @@ class CartController
         ];
     }
 
-    public function decreaseQuantity($request)
+    // PUT /cartItems/decrease - Needs $request and $userId
+    public function decreaseQuantity($request, $userId)
     {
-        $userId = $request['user_id'] ?? null;
         $cartItemId = $request['cart_item_id'] ?? null;
 
         if (!$userId) throw new AuthException("Unauthorized: missing userId");
@@ -86,9 +83,9 @@ class CartController
         ];
     }
 
-    public function increaseQuantity($request)
+    // PUT /cartItems/increase - Needs $request and $userId
+    public function increaseQuantity($request, $userId)
     {
-        $userId = $request['user_id'] ?? null;
         $cartItemId = $request['cart_item_id'] ?? null;
 
         if (!$userId) throw new AuthException("Unauthorized: missing userId");

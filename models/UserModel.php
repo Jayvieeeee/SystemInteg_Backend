@@ -31,18 +31,21 @@ class UserModel
     public function create($data)
     {
         $stmt = $this->conn->prepare("INSERT INTO users
-    (first_name,last_name,email,contact_no,username,password,status,created_at,updated_at)
-    VALUES (?,?,?,?,?,?,?, NOW(), NOW())");
+        (first_name,last_name,email,contact_no,username,password,role,status,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?,?, NOW(), NOW())");
 
-        $status = 'active';
+        $role = $data['role'] ?? 'customer';     // default to customer if not set
+        $status = $data['status'] ?? 'active';   // default to active if not set
+
         $stmt->bind_param(
-            "sssssss",
+            "ssssssss",
             $data['first_name'],
             $data['last_name'],
             $data['email'],
             $data['contact_no'],
             $data['username'],
             $data['password'],
+            $role,
             $status
         );
 
@@ -53,6 +56,7 @@ class UserModel
         $user_id = $stmt->insert_id;
         return $this->findById($user_id);
     }
+
 
 
     public function findById($userId)
@@ -187,6 +191,72 @@ class UserModel
         $stmt = $this->conn->prepare("UPDATE users SET password = ? WHERE user_id = ?");
         $stmt->bind_param("si", $newPassword, $userId);
 
+        return $stmt->execute();
+    }
+
+
+    public function getAllCustomers()
+    {
+        $query = "SELECT 
+                  u.user_id AS customer_id, 
+                  CONCAT(u.first_name, ' ', u.last_name) AS name, 
+                  u.email, 
+                  u.contact_no, 
+                  a.address, 
+                  COUNT(o.order_id) AS total_orders
+              FROM users u
+              LEFT JOIN addresses a ON u.user_id = a.user_id
+              LEFT JOIN orders o ON u.user_id = o.user_id
+              WHERE u.role = 'customer'
+              GROUP BY u.user_id";
+
+        $result = $this->conn->query($query);
+
+        $customers = [];
+        while ($row = $result->fetch_assoc()) {
+            $customers[] = $row;
+        }
+
+        return $customers;
+    }
+
+    public function getCustomerById($id)
+    {
+        $query = "SELECT 
+                  u.user_id AS customer_id, 
+                  CONCAT(u.first_name, ' ', u.last_name) AS name, 
+                  u.email, 
+                  u.contact_no, 
+                  a.address, 
+                  COUNT(o.order_id) AS total_orders
+              FROM users u
+              LEFT JOIN addresses a ON u.user_id = a.user_id
+              LEFT JOIN orders o ON u.user_id = o.user_id
+              WHERE u.user_id = ? AND u.role = 'customer'
+              GROUP BY u.user_id";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        return $result->fetch_assoc();
+    }
+
+    public function getAllByRole($role)
+    {
+        $stmt = $this->conn->prepare("SELECT user_id, first_name, last_name, contact_no, email, status, created_at 
+                                  FROM users WHERE role = ?");
+        $stmt->bind_param("s", $role);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
+    public function updateRiderStatus($userId, $status)
+    {
+        $stmt = $this->conn->prepare("UPDATE users SET status = ?, updated_at = NOW() WHERE user_id = ?");
+        $stmt->bind_param("si", $status, $userId);
         return $stmt->execute();
     }
 }

@@ -4,6 +4,7 @@ require_once __DIR__ . '/exceptions/AuthException.php';
 require_once __DIR__ . '/exceptions/ValidationException.php';
 require_once __DIR__ . '/exceptions/NotFoundException.php';
 require_once __DIR__ . '/exceptions/ConflictException.php';
+require_once __DIR__ . '/middleware/CorsMiddleware.php';
 
 $container = require __DIR__ . '/init/Services.php';
 $routes = require __DIR__ . '/routes/api.php';
@@ -21,16 +22,11 @@ function sendErrorResponse($e)
     exit;
 }
 
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Allow-Credentials: true");
-header("Content-Type: application/json; charset=UTF-8");
+// Handle CORS immediately using CorsMiddleware (static call)
+CorsMiddleware::handlePreflight();
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
+// Set content type
+header("Content-Type: application/json; charset=UTF-8");
 
 // Parse request
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -41,8 +37,20 @@ if (strpos($uri, '/api') === 0) {
     $uri = substr($uri, 4); // remove 4 chars = "/api"
 }
 
-$rawInput = file_get_contents("php://input");
-$inputData = json_decode($rawInput, true) ?? [];
+// Handle different content types
+$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+
+if (strpos($contentType, 'multipart/form-data') !== false) {
+    // ✅ For file uploads, merge $_POST and $_FILES
+    $inputData = array_merge($_POST, ['_files' => $_FILES]);
+} else {
+    // For JSON, use php://input
+    $rawInput = file_get_contents("php://input");
+    $inputData = json_decode($rawInput, true) ?? [];
+}
+
+// $rawInput = file_get_contents("php://input");
+// $inputData = json_decode($rawInput, true) ?? [];
 
 $runner = $container->get('middlewareRunner');
 
@@ -51,7 +59,6 @@ try {
     $params = [];
 
     foreach ($routes as $route) {
-
         $pattern = "@^" . preg_replace('/\{[^}]+\}/', '([^/]+)', $route['path']) . "$@";
         if ($method === $route['method'] && preg_match($pattern, $uri, $matches)) {
             array_shift($matches); // remove full match
@@ -65,12 +72,18 @@ try {
         throw new NotFoundException("Route not found: $uri");
     }
 
-    $runner->add($container->get('corsMiddleware'));
-
+    // Add auth middleware if required
     if (!empty($matched['auth'])) {
         $runner->add($container->get('authMiddleware'));
     }
 
+    if (!empty($matched['role'])) {
+        $runner->add($container->get('roleMiddleware', [
+            'role' => $matched['role']
+        ]));
+    }
+
+    // Add validation middleware for specific actions
     if (in_array($matched['action'], ['register', 'login'])) {
         $fields = [];
         if ($matched['action'] === 'register') {
@@ -85,11 +98,12 @@ try {
         ]));
     }
 
-    if (in_array($matched['action'], ['createGallon', 'updateGallon'])) {
-        $fields = ['name', 'image_url', 'size', 'price'];
-        $runner->add($container->get('validateMiddleware', ['fields' => $fields]));
-    }
+    // if (in_array($matched['action'], ['createGallon', 'updateGallon'])) {
+    //     $fields = ['name', 'image_url', 'size', 'price'];
+    //     $runner->add($container->get('validateMiddleware', ['fields' => $fields]));
+    // }
 
+    // Run all middlewares
     $request = $runner->run($inputData);
 
     $userId = $request['user_id'] ?? null;
@@ -103,48 +117,25 @@ try {
     }
 
     $controller = $container->get($controllerName);
-    $params = $matched['params'] ?? [];
-    $params = is_array($params) ? $params : [];
 
-    switch ($actionName) {
-        case 'createAddress':
-            $result = $controller->$actionName($request, $userId, ...$params);
-            break;
+    // Build arguments dynamically
+    $args = [];
 
-        case 'updateAddress':
-            if (empty($params)) {
-                $parts = explode('/', $uri);
-                $addressId = end($parts);
-                $result = $controller->updateAddress($request, $addressId, $userId);
-            } else {
-                $result = $controller->updateAddress($request, $params[0] ?? null, $userId);
-            }
-            break;
-
-        case 'deleteAddress':
-        case 'setDefaultAddress':
-        case 'getUserAddresses':
-            $result = $controller->$actionName($userId, ...$params);
-            break;
-
-        case 'createOrder':
-            $result = $controller->$actionName($request, $userId);
-            break;
-
-        case 'getAddress':
-            if (empty($params)) {
-                $parts = explode('/', $uri);
-                $addressId = end($parts);
-                $result = $controller->getAddress($addressId, $userId);
-            } else {
-                $result = $controller->getAddress($params[0] ?? null, $userId);
-            }
-            break;
-
-        default:
-            $result = $controller->$actionName($request, ...$params);
-            break;
+    // Add $request if it's POST/PUT/PATCH or DELETE with body
+    if (in_array($method, ['POST', 'PUT', 'PATCH']) || ($method === 'DELETE' && !empty($inputData))) {
+        $args[] = $request;
     }
+
+    // Add $userId if authenticated
+    if (!empty($matched['auth'])) {
+        $args[] = $userId;
+    }
+
+    // Add route parameters (e.g., {id}, {addressId})
+    $args = array_merge($args, $params);
+
+    // Call the controller method with dynamic arguments
+    $result = $controller->$actionName(...$args);
 
     echo json_encode($result);
     exit;

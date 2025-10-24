@@ -3,9 +3,9 @@ require_once 'BaseMiddleware.php';
 
 class CorsMiddleware extends BaseMiddleware
 {
-    public function handle($request)
+    // Static method for preflight handling (called before routing)
+    public static function handlePreflight()
     {
-
         header("Access-Control-Allow-Origin: *");
         header("Access-Control-Allow-Credentials: true");
         header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
@@ -15,7 +15,12 @@ class CorsMiddleware extends BaseMiddleware
             http_response_code(200);
             exit;
         }
+    }
 
+    // Instance method for middleware chain (if needed)
+    public function handle($request)
+    {
+        // Headers already set by static method
         return $request;
     }
 }

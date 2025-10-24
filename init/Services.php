@@ -26,6 +26,10 @@ require_once __DIR__ . '/../controllers/ProfileController.php';
 require_once __DIR__ . '/../controllers/ImageController.php';
 require_once __DIR__ . '/../controllers/CartController.php';
 require_once __DIR__ . '/../controllers/PaypalController.php';
+require_once __DIR__ . '/../controllers/AdminOrdersController.php';
+require_once __DIR__ . '/../controllers/AdminCustomerController.php';
+require_once __DIR__ . '/../controllers/AdminRiderController.php';
+require_once __DIR__ . '/../controllers/RiderPageController.php';
 
 
 // Middlewares 
@@ -35,7 +39,9 @@ require_once __DIR__ . '/../middleware/RateLimitMiddleware.php';
 require_once __DIR__ . '/../middleware/SanitizeMiddleware.php';
 require_once __DIR__ . '/../middleware/ValidateMiddleware.php';
 require_once __DIR__ . '/../middleware/AuthMiddleware.php';
+require_once __DIR__ . '/../middleware/RoleMiddleware.php';
 require_once __DIR__ . '/../middleware/MiddlewareRunner.php';
+
 
 // Libraries
 require_once __DIR__ . '/../libs/php-jwt-main/src/JWT.php';
@@ -96,6 +102,14 @@ $container->set('validateMiddleware', fn($c, $params) => new ValidateMiddleware(
 
 $container->set('authMiddleware', fn($c, $params) => new AuthMiddleware());
 
+
+$container->set('roleMiddleware', function ($c, $params = []) {
+    $role = $params['role'] ?? null;
+    if (!$role) {
+        throw new Exception("Role is required for RoleMiddleware");
+    }
+    return new RoleMiddleware($role);
+});
 // Middleware Runner
 $container->set('middlewareRunner', function ($c, $params) {
     $runner = new MiddlewareRunner();
@@ -135,8 +149,23 @@ $container->set('PaypalController', fn($c, $params) => new PaypalController(
     $c->get('orderModel'),
     $c->get('paypalService')
 ));
-
-
+$container->set('AdminOrdersController', fn($c, $params) => new AdminOrdersController(
+    $c->get('orderModel')
+));
+$container->set('AdminCustomerController', function ($c) {
+    return new AdminCustomerController(
+        $c->get('userModel'),
+        $c->get('addressModel'),
+        $c->get('orderModel')
+    );
+});
+$container->set('AdminRiderController', fn($c, $params) => new AdminRiderController(
+    $c->get('userModel'),
+    $c->get('orderModel')
+));
+$container->set('RiderPageController', fn($c, $params) => new RiderPageController(
+    $c->get('orderModel')
+));
 
 
 

@@ -123,4 +123,21 @@ class AddressModel
         $stmt->bind_param("iii", $flag, $addressId, $userId);
         return $stmt->execute();
     }
+
+    public function getAddressesByCustomerId($customerId)
+    {
+        $query = "SELECT address_id AS address_id, label, address, is_default 
+              FROM addresses WHERE user_id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $customerId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $addresses = [];
+        while ($row = $result->fetch_assoc()) {
+            $row['is_default'] = (bool)$row['is_default'];
+            $addresses[] = $row;
+        }
+        return $addresses;
+    }
 }

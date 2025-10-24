@@ -1,6 +1,6 @@
 <?php
 
-require_once "BaseMiddleware";
+require_once "BaseMiddleware.php";
 require_once __DIR__ . "/../exceptions/AuthException.php";
 
 class RoleMiddleware extends BaseMiddleware
@@ -14,8 +14,17 @@ class RoleMiddleware extends BaseMiddleware
 
     public function handle($request)
     {
-        if (!isset($request['userRole']) || $request['userRole'] !== $this->requiredRole) {
-            throw new AuthException("Insufficient role");
+        // Check if role exists in request
+        if (!isset($request['role'])) {
+            throw new AuthException("Role not found in request", 403);
         }
+
+        // Check if user has required role
+        if ($request['role'] !== $this->requiredRole) {
+            throw new AuthException("Insufficient permissions. Required role: {$this->requiredRole}", 403);
+        }
+
+        // Role check passed, continue
+        return $request;
     }
 }

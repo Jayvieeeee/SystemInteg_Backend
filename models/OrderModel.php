@@ -292,20 +292,21 @@ class OrderModel
 
     public function getLatestOrders($limit = 5)
     {
-        $query = "SELECT o.id, o.total_amount, o.status, o.created_at,
-                     GROUP_CONCAT(CONCAT(g.name, ' ', oi.quantity, 'x') SEPARATOR ', ') as order_items
-              FROM orders o
-              JOIN order_items oi ON o.id = oi.order_id
-              JOIN gallons g ON oi.gallon_id = g.id
-              GROUP BY o.id
-              ORDER BY o.created_at DESC
-              LIMIT ?";
+        $query = "SELECT o.order_id, o.total_price, o.status, o.created_at,
+                 GROUP_CONCAT(CONCAT(g.name, ' x', oi.quantity) SEPARATOR ', ') as order_items
+          FROM orders o
+          JOIN order_items oi ON o.order_id = oi.order_id
+          JOIN gallons g ON oi.gallon_id = g.gallon_id
+          GROUP BY o.order_id
+          ORDER BY o.created_at DESC
+          LIMIT ?";
+
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param("i", $limit);
         $stmt->execute();
         $result = $stmt->get_result();
 
-        return $result->fetch_all(MYSQLI_ASSOC);
+        return $result->fetch_all(MYSQLI_ASSOC) ?: [];
     }
 
     public function updatePaymentStatus($orderId, $status, $paymentMethod)
@@ -315,5 +316,224 @@ class OrderModel
         $stmt->bind_param("ssi", $status, $paymentMethod, $orderId);
 
         return $stmt->execute();
+    }
+
+    public function getAllOrders()
+    {
+        $query = "
+        SELECT 
+            o.order_id,
+            o.user_id,
+            CONCAT(u.first_name, ' ', u.last_name) AS customer_name,
+            GROUP_CONCAT(CONCAT(g.name, ' x', oi.quantity) SEPARATOR ', ') AS products,
+            o.total_price,
+            DATE_FORMAT(o.created_at, '%m-%d-%Y %h:%i%p') AS date_time,
+            o.status
+        FROM orders o
+        JOIN users u ON o.user_id = u.user_id
+        JOIN order_items oi ON o.order_id = oi.order_id
+        JOIN gallons g ON oi.gallon_id = g.gallon_id
+        GROUP BY o.order_id, o.user_id, u.first_name, u.last_name, o.total_price, o.created_at, o.status
+        ORDER BY o.created_at DESC
+    ";
+
+        $result = $this->conn->query($query);
+        $orders = [];
+
+        while ($row = $result->fetch_assoc()) {
+            $orders[] = $row;
+        }
+
+        return $orders;
+    }
+
+    public function getOrderById($orderId)
+    {
+        $stmt = $this->conn->prepare("
+            SELECT o.*, 
+                   u.first_name, u.last_name, 
+                   a.label AS address_label, a.address AS full_address
+            FROM orders o
+            JOIN users u ON o.user_id = u.user_id
+            LEFT JOIN addresses a ON o.address_id = a.address_id
+            WHERE o.order_id = ?
+        ");
+        $stmt->bind_param("i", $orderId);
+        $stmt->execute();
+        $order = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$order) {
+            return null;
+        }
+
+        // Add order items din para complete view sa admin
+        $stmtItems = $this->conn->prepare("
+            SELECT oi.*, g.name AS gallon_name, g.image_url
+            FROM order_items oi
+            JOIN gallons g ON oi.gallon_id = g.gallon_id
+            WHERE oi.order_id = ?
+        ");
+        $stmtItems->bind_param("i", $orderId);
+        $stmtItems->execute();
+        $order['items'] = $stmtItems->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmtItems->close();
+
+        $order['customer_name'] = $order['first_name'] . ' ' . $order['last_name'];
+        unset($order['first_name'], $order['last_name']);
+
+        return $order;
+    }
+
+    /**
+     * Get all orders filtered by status (for admin filters)
+     */
+    public function getOrdersByStatus($status)
+    {
+        $stmt = $this->conn->prepare("
+            SELECT o.order_id, o.total_price, o.status, o.created_at,
+                   u.first_name, u.last_name
+            FROM orders o
+            JOIN users u ON o.user_id = u.user_id
+            WHERE o.status = ?
+            ORDER BY o.created_at DESC
+        ");
+        $stmt->bind_param("s", $status);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        foreach ($result as &$order) {
+            $order['total_price'] = (float) $order['total_price'];
+            $order['customer_name'] = $order['first_name'] . ' ' . $order['last_name'];
+            unset($order['first_name'], $order['last_name']);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Update order status (for admin actions)
+     */
+    public function updateStatus($orderId, $newStatus)
+    {
+        $stmt = $this->conn->prepare("
+            UPDATE orders 
+            SET status = ? 
+            WHERE order_id = ?
+        ");
+        $stmt->bind_param("si", $newStatus, $orderId);
+        $success = $stmt->execute();
+        $stmt->close();
+
+        return $success;
+    }
+
+    public function getOrdersByCustomerId($customerId)
+    {
+        $query = "SELECT 
+                o.order_id,
+                o.status,
+                o.total_price,
+                o.payment_method,
+                o.pickup_datetime,
+                g.name AS gallon_name
+              FROM orders o
+              LEFT JOIN order_items oi ON o.order_id = oi.order_id
+              LEFT JOIN gallons g ON oi.gallon_id = g.gallon_id
+              WHERE o.user_id = ?
+              ORDER BY o.created_at DESC";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param('i', $customerId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $orders = [];
+        while ($row = $result->fetch_assoc()) {
+            $orders[] = $row;
+        }
+
+        return $orders;
+    }
+    public function getOrdersForActiveRider()
+    {
+        $statuses = ['to_pickup', 'to_deliver'];
+        $statusPlaceholders = implode(',', array_fill(0, count($statuses), '?'));
+        $types = str_repeat('s', count($statuses));
+
+        $sql = "SELECT 
+                o.*,
+                CONCAT(u.first_name, ' ', u.last_name) AS customer_name,
+                u.first_name,
+                u.last_name,
+                u.contact_no,
+                a.address
+            FROM orders o
+            LEFT JOIN users u ON o.user_id = u.user_id
+            LEFT JOIN addresses a ON o.address_id = a.address_id
+            WHERE o.status IN ($statusPlaceholders)
+            ORDER BY o.created_at DESC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param($types, ...$statuses);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
+
+    // Update order status (picked_up / delivered)
+    public function riderUpdateStatus($orderId, $newStatus)
+    {
+        if (!in_array($newStatus, ['picked_up', 'delivered'])) {
+            throw new Exception("Invalid status");
+        }
+
+        $stmt = $this->conn->prepare("UPDATE orders SET status = ? WHERE order_id = ?");
+        $stmt->bind_param("si", $newStatus, $orderId);
+        $stmt->execute();
+        return $stmt->affected_rows;
+    }
+
+    public function getDeliveriesByRiderId($riderId)
+    {
+        $query = "SELECT 
+                o.order_id,
+                o.user_id AS customer_id,
+                o.status,
+                o.total_price,
+                o.payment_method,
+                o.created_at,
+                c.first_name AS customer_first_name,
+                c.last_name AS customer_last_name,
+                a.label AS address_label,
+                a.address AS full_address
+              FROM orders o
+              JOIN users c ON o.user_id = c.user_id
+              LEFT JOIN addresses a ON o.address_id = a.address_id
+              WHERE o.status = 'completed'
+              ORDER BY o.created_at DESC";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $deliveries = [];
+        while ($row = $result->fetch_assoc()) {
+            $deliveries[] = [
+                'order_id' => $row['order_id'],
+                'customer_name' => $row['customer_first_name'] . ' ' . $row['customer_last_name'],
+                'status' => $row['status'],
+                'total_price' => $row['total_price'],
+                'payment_method' => $row['payment_method'],
+                'address' => $row['address_label']
+                    ? $row['address_label'] . ' - ' . $row['full_address']
+                    : $row['full_address'],
+                'created_at' => $row['created_at']
+            ];
+        }
+
+        return $deliveries;
     }
 }

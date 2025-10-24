@@ -34,8 +34,19 @@ class GallonModel
     {
         $stmt = $this->conn->prepare("INSERT INTO gallons (name, image_url, size, price) VALUES (?, ?, ?, ?)");
         $stmt->bind_param("sssd", $data['name'], $data['image_url'], $data['size'], $data['price']);
-        $stmt->execute();
-        return ['success' => true, 'id' => $stmt->insert_id];
+
+        if ($stmt->execute()) {
+            return [
+                'success' => true,
+                'gallon_id' => $stmt->insert_id,
+                'image_url' => $data['image_url'] // ✅ Add this
+            ];
+        }
+
+        return [
+            'success' => false,
+            'message' => 'Failed to create gallon'
+        ];
     }
 
     // Update gallon
