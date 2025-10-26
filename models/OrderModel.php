@@ -292,14 +292,24 @@ class OrderModel
 
     public function getLatestOrders($limit = 5)
     {
-        $query = "SELECT o.order_id, o.total_price, o.status, o.created_at,
-                 GROUP_CONCAT(CONCAT(g.name, ' x', oi.quantity) SEPARATOR ', ') as order_items
-          FROM orders o
-          JOIN order_items oi ON o.order_id = oi.order_id
-          JOIN gallons g ON oi.gallon_id = g.gallon_id
-          GROUP BY o.order_id
-          ORDER BY o.created_at DESC
-          LIMIT ?";
+        $query = "
+        SELECT 
+            o.order_id,
+            o.total_price,
+            o.status,
+            o.created_at,
+            GROUP_CONCAT(CONCAT(g.name, ' x', oi.quantity) SEPARATOR ', ') AS order_items
+        FROM (
+            SELECT order_id, total_price, status, created_at
+            FROM orders
+            ORDER BY created_at DESC
+            LIMIT ?
+        ) AS o
+        JOIN order_items oi ON o.order_id = oi.order_id
+        JOIN gallons g ON oi.gallon_id = g.gallon_id
+        GROUP BY o.order_id
+        ORDER BY o.created_at DESC
+    ";
 
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param("i", $limit);
@@ -308,6 +318,32 @@ class OrderModel
 
         return $result->fetch_all(MYSQLI_ASSOC) ?: [];
     }
+
+
+    public function getLatestOrdersByCustomer($customerId, $limit = 5)
+    {
+        $query = "SELECT 
+                o.order_id, 
+                o.total_price, 
+                o.status, 
+                o.created_at,
+                GROUP_CONCAT(CONCAT(g.name, ' x', oi.quantity) SEPARATOR ', ') AS order_items
+              FROM orders o
+              JOIN order_items oi ON o.order_id = oi.order_id
+              JOIN gallons g ON oi.gallon_id = g.gallon_id
+              WHERE o.user_id = ?
+              GROUP BY o.order_id
+              ORDER BY o.created_at DESC
+              LIMIT ?";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("ii", $customerId, $limit);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        return $result->fetch_all(MYSQLI_ASSOC) ?: [];
+    }
+
 
     public function updatePaymentStatus($orderId, $status, $paymentMethod)
     {
@@ -496,44 +532,90 @@ class OrderModel
         return $stmt->affected_rows;
     }
 
-    public function getDeliveriesByRiderId($riderId)
+    // public function getDeliveriesByRiderId($riderId)
+    // {
+    //     $query = "SELECT 
+    //             o.order_id,
+    //             o.user_id AS customer_id,
+    //             o.status,
+    //             o.total_price,
+    //             o.payment_method,
+    //             o.created_at,
+    //             c.first_name AS customer_first_name,
+    //             c.last_name AS customer_last_name,
+    //             a.label AS address_label,
+    //             a.address AS full_address
+    //           FROM orders o
+    //           JOIN users c ON o.user_id = c.user_id
+    //           LEFT JOIN addresses a ON o.address_id = a.address_id
+    //           WHERE o.status = 'completed'
+    //           ORDER BY o.created_at DESC";
+
+    //     $stmt = $this->conn->prepare($query);
+    //     $stmt->execute();
+    //     $result = $stmt->get_result();
+
+    //     $deliveries = [];
+    //     while ($row = $result->fetch_assoc()) {
+    //         $deliveries[] = [
+    //             'order_id' => $row['order_id'],
+    //             'customer_name' => $row['customer_first_name'] . ' ' . $row['customer_last_name'],
+    //             'status' => $row['status'],
+    //             'total_price' => $row['total_price'],
+    //             'payment_method' => $row['payment_method'],
+    //             'address' => $row['address_label']
+    //                 ? $row['address_label'] . ' - ' . $row['full_address']
+    //                 : $row['full_address'],
+    //             'created_at' => $row['created_at']
+    //         ];
+    //     }
+
+    //     return $deliveries;
+    // }
+
+    public function getSalesRevenue()
     {
-        $query = "SELECT 
-                o.order_id,
-                o.user_id AS customer_id,
-                o.status,
-                o.total_price,
-                o.payment_method,
-                o.created_at,
-                c.first_name AS customer_first_name,
-                c.last_name AS customer_last_name,
-                a.label AS address_label,
-                a.address AS full_address
-              FROM orders o
-              JOIN users c ON o.user_id = c.user_id
-              LEFT JOIN addresses a ON o.address_id = a.address_id
-              WHERE o.status = 'completed'
-              ORDER BY o.created_at DESC";
+        $revenue = [];
 
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        // Today's revenue
+        $query = "SELECT COALESCE(SUM(total_price), 0) as total 
+              FROM orders 
+              WHERE DATE(created_at) = CURDATE() 
+              AND status != 'cancelled'";
+        $revenue['today'] = $this->conn->query($query)->fetch_assoc()['total'];
 
-        $deliveries = [];
-        while ($row = $result->fetch_assoc()) {
-            $deliveries[] = [
-                'order_id' => $row['order_id'],
-                'customer_name' => $row['customer_first_name'] . ' ' . $row['customer_last_name'],
-                'status' => $row['status'],
-                'total_price' => $row['total_price'],
-                'payment_method' => $row['payment_method'],
-                'address' => $row['address_label']
-                    ? $row['address_label'] . ' - ' . $row['full_address']
-                    : $row['full_address'],
-                'created_at' => $row['created_at']
-            ];
-        }
+        // Last 7 days
+        $query = "SELECT DATE(created_at) as date, 
+                     COALESCE(SUM(total_price), 0) as total
+              FROM orders
+              WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+              AND status != 'cancelled'
+              GROUP BY DATE(created_at)
+              ORDER BY date ASC";
+        $result = $this->conn->query($query);
+        $revenue['daily'] = $result->fetch_all(MYSQLI_ASSOC);
 
-        return $deliveries;
+        return $revenue;
+    }
+
+    public function getOrdersToPickup()
+    {
+        $query = "SELECT COUNT(*) as count FROM orders 
+              WHERE status = 'preparing' 
+              AND pickup_datetime <= DATE_ADD(NOW(), INTERVAL 2 HOUR)";
+        return $this->conn->query($query)->fetch_assoc()['count'];
+    }
+
+    public function getOrdersToDeliver()
+    {
+        $query = "SELECT COUNT(*) as count FROM orders 
+              WHERE status = 'ready_for_delivery'";
+        return $this->conn->query($query)->fetch_assoc()['count'];
+    }
+
+    public function getTotalCustomers()
+    {
+        $query = "SELECT COUNT(*) as count FROM users WHERE role = 'customer'";
+        return $this->conn->query($query)->fetch_assoc()['count'];
     }
 }

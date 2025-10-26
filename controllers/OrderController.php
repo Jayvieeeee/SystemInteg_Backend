@@ -198,9 +198,14 @@ class OrderController
         ];
     }
 
-    public function getLatestOrders()
+    public function getLatestOrderByCustomer($userId)
     {
-        $orders = $this->orderModel->getLatestOrders(5);
+        if (!$userId) {
+            throw new AuthException("Unauthorized: missing user_id");
+        }
+
+        $orders = $this->orderModel->getLatestOrdersByCustomer($userId, 5);
+
         return [
             'success' => true,
             'data' => $orders

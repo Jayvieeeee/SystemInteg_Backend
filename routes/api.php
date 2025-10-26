@@ -19,7 +19,7 @@ return [
 
     // Orders - IMPORTANT: specific routes BEFORE generic routes with {id}
     ['path' => '/orders/stats',      'method' => 'GET',    'controller' => 'OrderController',   'action' => 'getOrderStats',     'auth' => true],
-    ['path' => '/orders/latest',     'method' => 'GET',    'controller' => 'OrderController',   'action' => 'getLatestOrders',   'auth' => true],
+    ['path' => '/orders/latest',     'method' => 'GET',    'controller' => 'OrderController',   'action' => 'getLatestOrderByCustomer',   'auth' => true],
     ['path' => '/orders',            'method' => 'POST',   'controller' => 'OrderController',   'action' => 'createOrder',       'auth' => true],
     ['path' => '/orders',            'method' => 'GET',    'controller' => 'OrderController',   'action' => 'getUserOrders',     'auth' => true],
     ['path' => '/orders/{id}',       'method' => 'GET',    'controller' => 'OrderController',   'action' => 'getOrder',          'auth' => true],
@@ -54,13 +54,16 @@ return [
     ['path' => '/admin/orders',                    'method' => 'GET', 'controller' => 'AdminOrdersController', 'action' => 'index',        'auth' => true, 'role' => 'admin'],
 
 
-
     // Admin Customers Page
     ['path' => '/admin/customers', 'method' => 'GET', 'controller' => 'AdminCustomerController', 'action' => 'index', 'auth' => true, 'role' => 'admin'],
     ['path' => '/admin/customers/{id}', 'method' => 'GET', 'controller' => 'AdminCustomerController', 'action' => 'show', 'auth' => true, 'role' => 'admin'],
 
     ['path' => '/rider/orders', 'method' => 'GET', 'controller' => 'RiderPageController', 'action' => 'getOrders', 'auth' => true, 'role' => 'rider'],
     ['path' => '/rider/orders/{id}/update-status', 'method' => 'PUT', 'controller' => 'RiderPageController', 'action' => 'updateStatus', 'auth' => true, 'role' => 'rider'],
+
+
+
+    ['path' => '/dashboard/stats', 'method' => 'GET', 'controller' => 'AdminDashboardController', 'action' => 'getDashboardStats', 'auth' => true],
 
     // Admin RidersPage
     ['path' => '/admin/riders', 'method' => 'GET', 'controller' => 'AdminRiderController', 'action' => 'index', 'auth' => true, 'role' => 'admin'],

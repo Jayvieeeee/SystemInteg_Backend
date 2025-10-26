@@ -29,6 +29,7 @@ require_once __DIR__ . '/../controllers/PaypalController.php';
 require_once __DIR__ . '/../controllers/AdminOrdersController.php';
 require_once __DIR__ . '/../controllers/AdminCustomerController.php';
 require_once __DIR__ . '/../controllers/AdminRiderController.php';
+require_once __DIR__ . '/../controllers/AdminDashboardController.php';
 require_once __DIR__ . '/../controllers/RiderPageController.php';
 
 
@@ -163,9 +164,13 @@ $container->set('AdminRiderController', fn($c, $params) => new AdminRiderControl
     $c->get('userModel'),
     $c->get('orderModel')
 ));
+$container->set('AdminDashboardController', fn($c, $params) => new AdminDashboardController(
+    $c->get('orderModel')
+));
 $container->set('RiderPageController', fn($c, $params) => new RiderPageController(
     $c->get('orderModel')
 ));
+
 
 
 
