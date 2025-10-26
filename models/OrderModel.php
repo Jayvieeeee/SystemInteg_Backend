@@ -532,46 +532,46 @@ class OrderModel
         return $stmt->affected_rows;
     }
 
-    // public function getDeliveriesByRiderId($riderId)
-    // {
-    //     $query = "SELECT 
-    //             o.order_id,
-    //             o.user_id AS customer_id,
-    //             o.status,
-    //             o.total_price,
-    //             o.payment_method,
-    //             o.created_at,
-    //             c.first_name AS customer_first_name,
-    //             c.last_name AS customer_last_name,
-    //             a.label AS address_label,
-    //             a.address AS full_address
-    //           FROM orders o
-    //           JOIN users c ON o.user_id = c.user_id
-    //           LEFT JOIN addresses a ON o.address_id = a.address_id
-    //           WHERE o.status = 'completed'
-    //           ORDER BY o.created_at DESC";
+    public function getDeliveriesByRiderId($riderId)
+    {
+        $query = "SELECT 
+                o.order_id,
+                o.user_id AS customer_id,
+                o.status,
+                o.total_price,
+                o.payment_method,
+                o.created_at,
+                c.first_name AS customer_first_name,
+                c.last_name AS customer_last_name,
+                a.label AS address_label,
+                a.address AS full_address
+              FROM orders o
+              JOIN users c ON o.user_id = c.user_id
+              LEFT JOIN addresses a ON o.address_id = a.address_id
+              WHERE o.status = 'completed'
+              ORDER BY o.created_at DESC";
 
-    //     $stmt = $this->conn->prepare($query);
-    //     $stmt->execute();
-    //     $result = $stmt->get_result();
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-    //     $deliveries = [];
-    //     while ($row = $result->fetch_assoc()) {
-    //         $deliveries[] = [
-    //             'order_id' => $row['order_id'],
-    //             'customer_name' => $row['customer_first_name'] . ' ' . $row['customer_last_name'],
-    //             'status' => $row['status'],
-    //             'total_price' => $row['total_price'],
-    //             'payment_method' => $row['payment_method'],
-    //             'address' => $row['address_label']
-    //                 ? $row['address_label'] . ' - ' . $row['full_address']
-    //                 : $row['full_address'],
-    //             'created_at' => $row['created_at']
-    //         ];
-    //     }
+        $deliveries = [];
+        while ($row = $result->fetch_assoc()) {
+            $deliveries[] = [
+                'order_id' => $row['order_id'],
+                'customer_name' => $row['customer_first_name'] . ' ' . $row['customer_last_name'],
+                'status' => $row['status'],
+                'total_price' => $row['total_price'],
+                'payment_method' => $row['payment_method'],
+                'address' => $row['address_label']
+                    ? $row['address_label'] . ' - ' . $row['full_address']
+                    : $row['full_address'],
+                'created_at' => $row['created_at']
+            ];
+        }
 
-    //     return $deliveries;
-    // }
+        return $deliveries;
+    }
 
     public function getSalesRevenue()
     {
