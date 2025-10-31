@@ -13,7 +13,7 @@ return [
     ['path' => '/gallons',           'method' => 'GET',    'controller' => 'GallonController',  'action' => 'getAllGallons',     'auth' => true, 'role'],
     ['path' => '/gallons/{id}',      'method' => 'GET',    'controller' => 'GallonController',  'action' => 'getGallon',         'auth' => true],
     ['path' => '/gallons',           'method' => 'POST',   'controller' => 'GallonController',  'action' => 'createGallon',      'auth' => true, 'role' => 'admin'],
-    ['path' => '/gallons/{id}',      'method' => 'PUT',    'controller' => 'GallonController',  'action' => 'updateGallon',      'auth' => true, 'role' => 'admin'],
+    ['path' => '/gallons/{id}',      'method' => 'POST',    'controller' => 'GallonController',  'action' => 'updateGallon',      'auth' => true, 'role' => 'admin'],
     ['path' => '/gallons/{id}',      'method' => 'DELETE', 'controller' => 'GallonController',  'action' => 'deleteGallon',      'auth' => true],
     ['path' => '/images/{filename}', 'method' => 'GET', 'controller' => 'ImageController', 'action' => 'serveImage', 'auth'  => false],
 

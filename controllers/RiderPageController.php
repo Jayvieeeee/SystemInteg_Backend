@@ -34,14 +34,14 @@ class RiderPageController
             throw new Exception("Order not found");
         }
 
-        $this->orderModel->updateStatus($orderId, $newStatus);
+        $this->orderModel->riderUpdateStatus($orderId, $newStatus);
 
         return ["message" => "Status updated"];
     }
 
     public function getDeliveryHistory()
     {
-        $completedOrders = $this->orderModel->getCompletedOrders();
+        $completedOrders = $this->orderModel->getDeliveredOrders();
         return $completedOrders;
     }
 }

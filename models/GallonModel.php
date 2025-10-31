@@ -58,7 +58,7 @@ class GallonModel
 
     /**
      * Update gallon (supports partial updates)
-     * ✅ Only updates fields that are provided
+     * ✅ FIXED: Only updates non-null fields dynamically
      */
     public function update($id, $data)
     {
@@ -72,24 +72,60 @@ class GallonModel
             ];
         }
 
-        // Merge with existing data (only update provided fields)
-        $merged = array_merge($existing, $data);
+        // ✅ Build dynamic SQL query based on provided fields
+        $fields = [];
+        $values = [];
+        $types = '';
 
-        $stmt = $this->conn->prepare("UPDATE gallons SET name=?, image_url=?, size=?, price=? WHERE gallon_id=?");
-        $stmt->bind_param(
-            "sssdi",
-            $merged['name'],
-            $merged['image_url'],
-            $merged['size'],
-            $merged['price'],
-            $id
-        );
+        if (isset($data['name'])) {
+            $fields[] = 'name=?';
+            $values[] = $data['name'];
+            $types .= 's';
+        }
+
+        if (isset($data['image_url'])) {
+            $fields[] = 'image_url=?';
+            $values[] = $data['image_url'];
+            $types .= 's';
+        }
+
+        if (isset($data['size'])) {
+            $fields[] = 'size=?';
+            $values[] = $data['size'];
+            $types .= 's';
+        }
+
+        if (isset($data['price'])) {
+            $fields[] = 'price=?';
+            $values[] = $data['price'];
+            $types .= 'd';
+        }
+
+        // If no fields to update, return early
+        if (empty($fields)) {
+            return [
+                'success' => false,
+                'message' => 'No fields to update'
+            ];
+        }
+
+        // Add ID to the end
+        $values[] = $id;
+        $types .= 'i';
+
+        // ✅ Dynamic SQL query
+        $sql = "UPDATE gallons SET " . implode(', ', $fields) . " WHERE gallon_id=?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param($types, ...$values);
 
         if ($stmt->execute()) {
+            // Get updated data
+            $updated = $this->getById($id);
+
             return [
                 'success' => true,
                 'message' => 'Gallon updated successfully',
-                'image_url' => $merged['image_url'] // ✅ Return updated image URL
+                'image_url' => $updated['image_url'] // ✅ Return actual image URL
             ];
         }
 

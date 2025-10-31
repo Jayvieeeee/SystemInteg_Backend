@@ -626,7 +626,7 @@ class OrderModel
 
     // In OrderModel class - update this method:
 
-    public function getCompletedOrders()
+    public function getDeliveredOrders()
     {
         $sql = "SELECT 
             o.*,
@@ -639,7 +639,7 @@ class OrderModel
         FROM orders o
         LEFT JOIN users u ON o.user_id = u.user_id
         LEFT JOIN addresses a ON o.address_id = a.address_id
-        WHERE o.status = 'completed'
+        WHERE o.status = 'delivered'
         ORDER BY o.created_at DESC";
 
         $stmt = $this->conn->prepare($sql);

@@ -25,37 +25,19 @@ class GallonController
 
         // ✅ Handle file upload if present
         if (isset($request['_files']['image']) && $request['_files']['image']['error'] === UPLOAD_ERR_OK) {
-            $uploadResult = $this->handleImageUpload($request['_files']['image']);
-
-            if ($uploadResult['success']) {
-                $uploadedImagePath = $uploadResult['path'];
-            } else {
-                return [
-                    'success' => false,
-                    'message' => $uploadResult['message'] ?? 'Failed to upload image'
-                ];
-            }
+            $uploadedImagePath = $this->handleImageUpload($request['_files']['image']);
         }
 
-        // ✅ Validate required fields
-        if (empty($request['name']) || empty($request['size']) || !isset($request['price'])) {
-            return [
-                'success' => false,
-                'message' => 'Name, size, and price are required'
-            ];
-        }
-
-        // ✅ Prepare data for insertion
+        // ✅ Always prefer uploaded image (not client-provided URL)
         $data = [
-            'name' => trim($request['name']),
-            'image_url' => $uploadedImagePath ?? ($request['image_url'] ?? null),
-            'size' => trim($request['size']),
-            'price' => (float)$request['price']
+            'name'  => $request['name'] ?? '',
+            'image_url' => $uploadedImagePath, // ✅ Only use uploaded path
+            'size'  => $request['size'] ?? '',
+            'price' => isset($request['price']) ? (float)$request['price'] : 0
         ];
 
         $result = $this->gallonModel->create($data);
 
-        // ✅ Return the full image URL in the response
         if ($result && isset($result['gallon_id'])) {
             $result['image_url'] = $uploadedImagePath;
         }
@@ -63,146 +45,101 @@ class GallonController
         return $result;
     }
 
-    public function updateGallon($request, $userId, $id)
-    {
-        $uploadedImagePath = null;
-
-        // ✅ Handle file upload if present (NEW!)
-        if (isset($request['_files']['image']) && $request['_files']['image']['error'] === UPLOAD_ERR_OK) {
-            // Get existing gallon to delete old image
-            $existingGallon = $this->gallonModel->getById($id);
-
-            $uploadResult = $this->handleImageUpload($request['_files']['image']);
-
-            if ($uploadResult['success']) {
-                $uploadedImagePath = $uploadResult['path'];
-
-                // Delete old image if exists
-                if ($existingGallon && isset($existingGallon['image_url'])) {
-                    $this->deleteImage($existingGallon['image_url']);
-                }
-            } else {
-                return [
-                    'success' => false,
-                    'message' => $uploadResult['message'] ?? 'Failed to upload image'
-                ];
-            }
-        }
-
-        // ✅ Prepare update data (only include fields that are provided)
-        $updateData = [];
-
-        if (isset($request['name'])) {
-            $updateData['name'] = trim($request['name']);
-        }
-
-        if ($uploadedImagePath) {
-            $updateData['image_url'] = $uploadedImagePath;
-        } elseif (isset($request['image_url'])) {
-            $updateData['image_url'] = $request['image_url'];
-        }
-
-        if (isset($request['size'])) {
-            $updateData['size'] = trim($request['size']);
-        }
-
-        if (isset($request['price'])) {
-            $updateData['price'] = (float)$request['price'];
-        }
-
-        if (empty($updateData)) {
-            return [
-                'success' => false,
-                'message' => 'No data to update'
-            ];
-        }
-
-        return $this->gallonModel->update((int)$id, $updateData);
-    }
-
-    public function deleteGallon($request, $id)
-    {
-        // Get gallon data to delete associated image
-        $gallon = $this->gallonModel->getById($id);
-
-        if ($gallon && isset($gallon['image_url'])) {
-            $this->deleteImage($gallon['image_url']);
-        }
-
-        return $this->gallonModel->delete($id);
-    }
-
-    /**
-     * Handle image upload with proper validation and error handling
-     * @return array ['success' => bool, 'path' => string|null, 'message' => string|null]
-     */
     private function handleImageUpload($file)
     {
         $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
         $maxSize = 5 * 1024 * 1024; // 5MB
 
-        // Validate file type
         if (!in_array($file['type'], $allowedTypes)) {
-            return [
-                'success' => false,
-                'message' => 'Invalid file type. Only JPEG, PNG, and WEBP are allowed.'
-            ];
-        }
-
-        // Validate file size
-        if ($file['size'] > $maxSize) {
-            return [
-                'success' => false,
-                'message' => 'File size too large. Maximum size is 5MB.'
-            ];
-        }
-
-        $uploadDir = __DIR__ . '/../api/images/';
-
-        // Create directory if it doesn't exist
-        if (!is_dir($uploadDir)) {
-            if (!mkdir($uploadDir, 0755, true)) {
-                return [
-                    'success' => false,
-                    'message' => 'Failed to create upload directory.'
-                ];
-            }
-        }
-
-        // Generate unique filename
-        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-        $filename = uniqid('gallon_', true) . '.' . strtolower($extension);
-        $uploadPath = $uploadDir . $filename;
-
-        // Move uploaded file
-        if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
-            return [
-                'success' => true,
-                'path' => '/images/' . $filename
-            ];
-        }
-
-        return [
-            'success' => false,
-            'message' => 'Failed to move uploaded file.'
-        ];
-    }
-
-    /**
-     * Delete image file from server
-     */
-    private function deleteImage($imagePath)
-    {
-        if (empty($imagePath)) {
             return false;
         }
 
-        $filePath = __DIR__ . '/..' . $imagePath;
+        if ($file['size'] > $maxSize) {
+            return false;
+        }
 
-        if (file_exists($filePath) && is_file($filePath)) {
-            return unlink($filePath);
+        // ✅ FIXED: Changed DIR to _DIR_
+        $uploadDir = __DIR__ . '/../images/';
+
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = uniqid('gallon_') . '.' . $extension;
+        $uploadPath = $uploadDir . $filename;
+
+        if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+            // ✅ Return the full URL path, not just filename
+            return '/images/' . $filename;
         }
 
         return false;
+    }
+
+    public function updateGallon($request, $userId, $id)
+    {
+        $uploadedImagePath = null;
+
+        // ✅ Handle file upload if present
+        if (isset($request['_files']['image']) && $request['_files']['image']['error'] === UPLOAD_ERR_OK) {
+            $uploadedImagePath = $this->handleImageUpload($request['_files']['image']);
+
+            // ✅ Optional: Delete old image
+            $existingGallon = $this->gallonModel->getById($id);
+            if ($existingGallon && !empty($existingGallon['image_url'])) {
+                $oldImagePath = __DIR__ . '/../' . $existingGallon['image_url'];
+                if (file_exists($oldImagePath)) {
+                    unlink($oldImagePath);
+                }
+            }
+        }
+
+        // ✅ FIXED: Build update data differently
+        $updateData = [];
+
+        // Always include these fields if they exist in request
+        if (isset($request['name'])) {
+            $updateData['name'] = $request['name'];
+        }
+        if (isset($request['size'])) {
+            $updateData['size'] = $request['size'];
+        }
+        if (isset($request['price'])) {
+            $updateData['price'] = (float)$request['price'];
+        }
+
+        // Handle image URL - always include if we have a new image or explicit image_url
+        if ($uploadedImagePath) {
+            $updateData['image_url'] = $uploadedImagePath;
+        } elseif (isset($request['image_url']) && $request['image_url'] !== '') {
+            $updateData['image_url'] = $request['image_url'];
+        }
+
+        // ✅ FIXED: Check if we actually have fields to update
+        if (empty($updateData)) {
+            return [
+                'success' => false,
+                'message' => 'No fields to update'
+            ];
+        }
+
+        // Debug log what we're updating
+        error_log("Updating gallon $id with data: " . print_r($updateData, true));
+
+        $result = $this->gallonModel->update((int)$id, $updateData);
+
+        // ✅ FIXED: Return proper response format
+        return [
+            'success' => $result !== false,
+            'message' => $result !== false ? 'Gallon updated successfully' : 'Failed to update gallon',
+            'image_url' => $uploadedImagePath ?? ($request['image_url'] ?? null),
+            'data' => $result
+        ];
+    }
+
+    public function deleteGallon($request, $id)
+    {
+        return $this->gallonModel->delete($id);
     }
 }

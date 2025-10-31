@@ -41,16 +41,16 @@ if (strpos($uri, '/api') === 0) {
 $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 
 if (strpos($contentType, 'multipart/form-data') !== false) {
-    // ✅ For file uploads, merge $_POST and $_FILES
-    $inputData = array_merge($_POST, ['_files' => $_FILES]);
+    // ✅ FIX: Don't merge - keep $_POST and add _files as separate key
+    $inputData = $_POST;
+    if (!empty($_FILES)) {
+        $inputData['_files'] = $_FILES;
+    }
 } else {
     // For JSON, use php://input
     $rawInput = file_get_contents("php://input");
     $inputData = json_decode($rawInput, true) ?? [];
 }
-
-// $rawInput = file_get_contents("php://input");
-// $inputData = json_decode($rawInput, true) ?? [];
 
 $runner = $container->get('middlewareRunner');
 
@@ -97,11 +97,6 @@ try {
             'route'  => $matched['action']
         ]));
     }
-
-    // if (in_array($matched['action'], ['createGallon', 'updateGallon'])) {
-    //     $fields = ['name', 'image_url', 'size', 'price'];
-    //     $runner->add($container->get('validateMiddleware', ['fields' => $fields]));
-    // }
 
     // Run all middlewares
     $request = $runner->run($inputData);
