@@ -14,8 +14,8 @@ return [
     ['path' => '/gallons/{id}',      'method' => 'GET',    'controller' => 'GallonController',  'action' => 'getGallon',         'auth' => true],
     ['path' => '/gallons',           'method' => 'POST',   'controller' => 'GallonController',  'action' => 'createGallon',      'auth' => true, 'role' => 'admin'],
     ['path' => '/gallons/{id}',      'method' => 'PUT',    'controller' => 'GallonController',  'action' => 'updateGallon',      'auth' => true, 'role' => 'admin'],
-    ['path' => '/gallons/{id}',      'method' => 'DELETE', 'controller' => 'GallonController',  'action' => 'deleteGallon',      'auth' => true, 'role' => 'admin'],
-    ['path' => '/images/{filename}', 'method' => 'GET', 'controller' => 'ImageController', 'action' => 'serveImage', 'auth' => true],
+    ['path' => '/gallons/{id}',      'method' => 'DELETE', 'controller' => 'GallonController',  'action' => 'deleteGallon',      'auth' => true],
+    ['path' => '/images/{filename}', 'method' => 'GET', 'controller' => 'ImageController', 'action' => 'serveImage', 'auth'  => false],
 
     // Orders - IMPORTANT: specific routes BEFORE generic routes with {id}
     ['path' => '/orders/stats',      'method' => 'GET',    'controller' => 'OrderController',   'action' => 'getOrderStats',     'auth' => true],
@@ -60,6 +60,7 @@ return [
 
     ['path' => '/rider/orders', 'method' => 'GET', 'controller' => 'RiderPageController', 'action' => 'getOrders', 'auth' => true, 'role' => 'rider'],
     ['path' => '/rider/orders/{id}/update-status', 'method' => 'PUT', 'controller' => 'RiderPageController', 'action' => 'updateStatus', 'auth' => true, 'role' => 'rider'],
+    ['path' => '/rider/delivery-history', 'method' => 'GET', 'controller' => 'RiderPageController', 'action' => 'getDeliveryHistory', 'auth' => true, 'role' => 'rider'],
 
 
 

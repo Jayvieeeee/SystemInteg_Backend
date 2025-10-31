@@ -82,7 +82,7 @@ class AddressController
     }
 
 
-    public function updateAddress($data, $id, $userId)
+    public function updateAddress($data, $userId, $id)
     {
         $address = $this->addressModel->getAddressById($id, $userId);
         if (!$address) {
@@ -111,7 +111,7 @@ class AddressController
         }
     }
 
-    public function deleteAddress($id, $userId)
+    public function deleteAddress($userId, $id)
     {
         $address = $this->addressModel->getAddressById($id, $userId);
         if (!$address) {

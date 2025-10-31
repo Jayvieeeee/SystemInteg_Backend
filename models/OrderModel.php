@@ -327,10 +327,12 @@ class OrderModel
                 o.total_price, 
                 o.status, 
                 o.created_at,
+                CONCAT(u.first_name, ' ', u.last_name) AS customer_name,
                 GROUP_CONCAT(CONCAT(g.name, ' x', oi.quantity) SEPARATOR ', ') AS order_items
               FROM orders o
               JOIN order_items oi ON o.order_id = oi.order_id
               JOIN gallons g ON oi.gallon_id = g.gallon_id
+              JOIN users u ON o.user_id = u.user_id
               WHERE o.user_id = ?
               GROUP BY o.order_id
               ORDER BY o.created_at DESC
@@ -343,6 +345,7 @@ class OrderModel
 
         return $result->fetch_all(MYSQLI_ASSOC) ?: [];
     }
+
 
 
     public function updatePaymentStatus($orderId, $status, $paymentMethod)
@@ -617,5 +620,47 @@ class OrderModel
     {
         $query = "SELECT COUNT(*) as count FROM users WHERE role = 'customer'";
         return $this->conn->query($query)->fetch_assoc()['count'];
+    }
+
+    // In OrderModel class - add this method:
+
+    // In OrderModel class - update this method:
+
+    public function getCompletedOrders()
+    {
+        $sql = "SELECT 
+            o.*,
+            CONCAT(u.first_name, ' ', u.last_name) AS customer_name,
+            u.first_name,
+            u.last_name,
+            u.contact_no,
+            a.address,
+            DATE_FORMAT(o.updated_at, '%m/%d/%y %h:%i%p') AS delivered_at
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.user_id
+        LEFT JOIN addresses a ON o.address_id = a.address_id
+        WHERE o.status = 'completed'
+        ORDER BY o.created_at DESC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        // Get order items for each order
+        foreach ($orders as &$order) {
+            $stmtItems = $this->conn->prepare("
+            SELECT oi.*, g.name AS gallon_name, g.image_url
+            FROM order_items oi
+            JOIN gallons g ON oi.gallon_id = g.gallon_id
+            WHERE oi.order_id = ?
+        ");
+            $stmtItems->bind_param("i", $order['order_id']);
+            $stmtItems->execute();
+            $order['items'] = $stmtItems->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmtItems->close();
+        }
+
+        return $orders;
     }
 }

@@ -38,4 +38,10 @@ class RiderPageController
 
         return ["message" => "Status updated"];
     }
+
+    public function getDeliveryHistory()
+    {
+        $completedOrders = $this->orderModel->getCompletedOrders();
+        return $completedOrders;
+    }
 }
