@@ -502,17 +502,26 @@ class OrderModel
         $types = str_repeat('s', count($statuses));
 
         $sql = "SELECT 
-                o.*,
-                CONCAT(u.first_name, ' ', u.last_name) AS customer_name,
-                u.first_name,
-                u.last_name,
-                u.contact_no,
-                a.address
-            FROM orders o
-            LEFT JOIN users u ON o.user_id = u.user_id
-            LEFT JOIN addresses a ON o.address_id = a.address_id
-            WHERE o.status IN ($statusPlaceholders)
-            ORDER BY o.created_at DESC";
+            o.order_id,
+            o.user_id,
+            o.address_id,
+            o.pickup_datetime,
+            o.payment_method,
+            o.payment_status,
+            o.total_price,
+            o.created_at,
+            o.updated_at,
+            o.status AS status,
+            CONCAT(u.first_name, ' ', u.last_name) AS customer_name,
+            u.first_name,
+            u.last_name,
+            u.contact_no AS contact_number,
+            a.address
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.user_id
+        LEFT JOIN addresses a ON o.address_id = a.address_id
+        WHERE o.status IN ($statusPlaceholders)
+        ORDER BY o.created_at DESC";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param($types, ...$statuses);
@@ -520,7 +529,6 @@ class OrderModel
         $result = $stmt->get_result();
         return $result->fetch_all(MYSQLI_ASSOC);
     }
-
 
     // Update order status (picked_up / delivered)
     public function riderUpdateStatus($orderId, $newStatus)
@@ -609,12 +617,12 @@ class OrderModel
         return $this->conn->query($query)->fetch_assoc()['count'];
     }
 
-    public function getOrdersToDeliver()
-    {
-        $query = "SELECT COUNT(*) as count FROM orders 
-              WHERE status = 'ready_for_delivery'";
-        return $this->conn->query($query)->fetch_assoc()['count'];
-    }
+    // public function getOrdersToDeliver()
+    // {
+    //     $query = "SELECT COUNT(*) as count FROM orders 
+    //           WHERE status = 'ready_for_delivery'";
+    //     return $this->conn->query($query)->fetch_assoc()['count'];
+    // }
 
     public function getTotalCustomers()
     {

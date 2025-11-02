@@ -17,13 +17,14 @@ class RiderPageController
         return $orders;
     }
 
-    // 2. Update order status (Picked Up / Delivered)
-    public function updateStatus($orderId)
+    public function updateStatus($request, $userId, $orderId)
     {
-        $rawInput = file_get_contents("php://input");
-        $inputData = json_decode($rawInput, true);
+        // Remove these lines since $request already has the data
+        // $rawInput = file_get_contents("php://input");
+        // $inputData = json_decode($rawInput, true);
 
-        $newStatus = isset($inputData['newStatus']) ? strtolower(trim($inputData['newStatus'])) : null;
+        // Use $request instead of $inputData
+        $newStatus = isset($request['newStatus']) ? strtolower(trim($request['newStatus'])) : null;
 
         if (!in_array($newStatus, ['picked_up', 'delivered'])) {
             throw new Exception("Invalid status");
@@ -34,9 +35,17 @@ class RiderPageController
             throw new Exception("Order not found");
         }
 
-        $this->orderModel->riderUpdateStatus($orderId, $newStatus);
+        $affectedRows = $this->orderModel->riderUpdateStatus($orderId, $newStatus);
 
-        return ["message" => "Status updated"];
+        return [
+            "message" => "Status updated",
+            "debug" => [
+                "order_id" => $orderId,
+                "requested_status" => $newStatus,
+                "status_before" => $order['status'],
+                "affected_rows" => $affectedRows
+            ]
+        ];
     }
 
     public function getDeliveryHistory()

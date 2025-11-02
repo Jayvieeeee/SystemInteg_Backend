@@ -10,7 +10,7 @@ return [
     ['path' => '/logout', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'logout', 'auth' => true],
 
     // Gallons
-    ['path' => '/gallons',           'method' => 'GET',    'controller' => 'GallonController',  'action' => 'getAllGallons',     'auth' => true, 'role'],
+    ['path' => '/gallons',           'method' => 'GET',    'controller' => 'GallonController',  'action' => 'getAllGallons',     'auth' => true],
     ['path' => '/gallons/{id}',      'method' => 'GET',    'controller' => 'GallonController',  'action' => 'getGallon',         'auth' => true],
     ['path' => '/gallons',           'method' => 'POST',   'controller' => 'GallonController',  'action' => 'createGallon',      'auth' => true, 'role' => 'admin'],
     ['path' => '/gallons/{id}',      'method' => 'POST',    'controller' => 'GallonController',  'action' => 'updateGallon',      'auth' => true, 'role' => 'admin'],
@@ -58,17 +58,19 @@ return [
     ['path' => '/admin/customers', 'method' => 'GET', 'controller' => 'AdminCustomerController', 'action' => 'index', 'auth' => true, 'role' => 'admin'],
     ['path' => '/admin/customers/{id}', 'method' => 'GET', 'controller' => 'AdminCustomerController', 'action' => 'show', 'auth' => true, 'role' => 'admin'],
 
-    ['path' => '/rider/orders', 'method' => 'GET', 'controller' => 'RiderPageController', 'action' => 'getOrders', 'auth' => true, 'role' => 'rider'],
-    ['path' => '/rider/orders/{id}/update-status', 'method' => 'PUT', 'controller' => 'RiderPageController', 'action' => 'updateStatus', 'auth' => true, 'role' => 'rider'],
-    ['path' => '/rider/delivery-history', 'method' => 'GET', 'controller' => 'RiderPageController', 'action' => 'getDeliveryHistory', 'auth' => true, 'role' => 'rider'],
 
-
-
-    ['path' => '/dashboard/stats', 'method' => 'GET', 'controller' => 'AdminDashboardController', 'action' => 'getDashboardStats', 'auth' => true],
+    ['path' => '/dashboard/stats', 'method' => 'GET', 'controller' => 'AdminDashboardController', 'action' => 'getDashboardStats', 'auth' => true, 'role' => 'admin'],
 
     // Admin RidersPage
     ['path' => '/admin/riders', 'method' => 'GET', 'controller' => 'AdminRiderController', 'action' => 'index', 'auth' => true, 'role' => 'admin'],
     ['path' => '/admin/riders/{id}', 'method' => 'GET', 'controller' => 'AdminRiderController', 'action' => 'show', 'auth' => true, 'role' => 'admin'],
     ['path' => '/admin/riders/{id}/update-status', 'method' => 'PUT', 'controller' => 'AdminRiderController', 'action' => 'updateRiderStatus', 'auth' => true, 'role' => 'admin'],
     ['path' => '/admin/add-rider', 'method' => 'POST', 'controller' => 'AdminRiderController', 'action' => 'addRider', 'auth' => true, 'role' => 'admin'],
+
+    //Rider Page
+    ['path' => '/rider/orders', 'method' => 'GET', 'controller' => 'RiderPageController', 'action' => 'getOrders', 'auth' => true, 'role' => 'rider'],
+    ['path' => '/rider/orders/{id}/update-status', 'method' => 'PUT', 'controller' => 'RiderPageController', 'action' => 'updateStatus', 'auth' => true, 'role' => 'rider'],
+    ['path' => '/rider/delivery-history', 'method' => 'GET', 'controller' => 'RiderPageController', 'action' => 'getDeliveryHistory', 'auth' => true, 'role' => 'rider'],
+
+
 ];
