@@ -84,6 +84,12 @@ class UserModel
         return true;
     }
 
+    public function updateVerificationToken($userId, $token)
+    {
+        $stmt = $this->conn->prepare("UPDATE users SET verification_token = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->bind_param("si", $token, $userId);
+        return $stmt->execute();
+    }
 
 
     public function findById($userId)

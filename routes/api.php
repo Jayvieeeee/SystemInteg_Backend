@@ -5,6 +5,7 @@ return [
     ['path' => '/login',             'method' => 'POST', 'controller' => 'AuthController', 'action' => 'login', 'auth' => false],
     ['path' => '/verify-email',      'method' => 'GET',  'controller' => 'AuthController', 'action' => 'verifyEmail', 'auth' => false],
     ['path' => '/forgot-password',   'method' => 'POST', 'controller' => 'AuthController', 'action' => 'forgotPassword', 'auth' => false],
+    ['path' => '/send-verification-email', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'sendVerificationEmailRequest', 'auth' => true],
     ['path' => '/verify-reset-code', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'verifyResetCode', 'auth' => false],
     ['path' => '/reset-password',    'method' => 'POST', 'controller' => 'AuthController', 'action' => 'resetPassword', 'auth' => false],
     ['path' => '/resend-reset-code', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'resendResetCode', 'auth' => true],

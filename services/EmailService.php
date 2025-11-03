@@ -208,7 +208,7 @@ class EmailService
             $mail = $this->mailer;
             $mail->clearAddresses();
 
-            $verificationLink = $_ENV['APP_URL'] . "/api/verify-email?token=" . $user['verification_token'];
+            $verificationLink = $_ENV['APP_URL'] . "/verify-email?token=" . $user['verification_token'];
 
             $mail->setFrom('dmcarss23@gmail.com', 'Sismoya Water');
             $mail->addAddress($user['email'], $user['first_name'] . ' ' . $user['last_name']);

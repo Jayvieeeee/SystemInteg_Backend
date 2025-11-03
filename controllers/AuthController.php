@@ -120,13 +120,98 @@ class AuthController
 
         // Send welcome email after successful verification
         // Change this to sendWelcomeEmail if you have that method
-        $this->emailService->sendWelcomeEmail($user);
+        $this->emailService->sendVerificationEmail($user);
 
         return [
             "error" => false,
             "message" => "Email verified successfully! You can now login.",
             "redirect" => "/customer/dashboard"
         ];
+    }
+
+    public function sendVerificationEmailRequest()
+    {
+        try {
+            // Get the authenticated user (from JWT token or session)
+            $userId = $this->getAuthenticatedUserId(); // You need to implement this
+
+            if (!$userId) {
+                http_response_code(401);
+                return [
+                    "error" => true,
+                    "message" => "Authentication required"
+                ];
+            }
+
+            // Get user data
+            $user = $this->userModel->findById($userId);
+
+            if (!$user) {
+                http_response_code(404);
+                return [
+                    "error" => true,
+                    "message" => "User not found"
+                ];
+            }
+
+            // Check if already verified
+            if ($user['is_verified']) {
+                return [
+                    "error" => false,
+                    "message" => "Email already verified",
+                    "already_verified" => true
+                ];
+            }
+
+            // Generate verification token if doesn't exist
+            if (!$user['verification_token']) {
+                $verificationToken = bin2hex(random_bytes(32));
+                $this->userModel->updateVerificationToken($user['id'], $verificationToken);
+                $user['verification_token'] = $verificationToken;
+            }
+
+            // Send verification email
+            $emailSent = $this->emailService->sendVerificationEmail($user);
+
+            if (!$emailSent) {
+                http_response_code(500);
+                return [
+                    "error" => true,
+                    "message" => "Failed to send verification email"
+                ];
+            }
+
+            return [
+                "error" => false,
+                "success" => true,
+                "message" => "Verification email sent successfully! Please check your inbox and spam folder."
+            ];
+        } catch (Exception $e) {
+            http_response_code(500);
+            return [
+                "error" => true,
+                "message" => "Failed to send verification email: " . $e->getMessage()
+            ];
+        }
+    }
+
+    // Helper method to get authenticated user ID (adjust based on your auth system)
+    private function getAuthenticatedUserId()
+    {
+        // If using session-based auth
+        // return $_SESSION['user_id'] ?? null;
+
+        // If using JWT tokens (you'll need to decode the token)
+        $headers = getallheaders();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+
+        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+            $token = $matches[1];
+            // Decode JWT token and return user ID
+            // return $this->jwtService->decode($token)->user_id;
+        }
+
+        return null;
     }
 
     public function forgotPassword($data)
