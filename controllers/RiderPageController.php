@@ -13,9 +13,36 @@ class RiderPageController
     // 1. Get orders for active rider (To Pick Up & To Deliver)
     public function getOrders()
     {
-        $orders = $this->orderModel->getOrdersForActiveRider();
-        return $orders;
+        try {
+            $orders = $this->orderModel->getOrdersForActiveRider();
+
+            // If empty result
+            if (empty($orders)) {
+                return [
+                    "success" => false,
+                    "message" => "No active rider orders found."
+                ];
+            }
+
+            return [
+                "success" => true,
+                "data" => $orders
+            ];
+        } catch (Exception $e) {
+            // Log detailed error to debug.log
+            $debugFile = __DIR__ . "/../logs/debug.log";
+            $time = date("Y-m-d H:i:s");
+            $errorMsg = "[$time] getOrders() Error: " . $e->getMessage() . PHP_EOL;
+            file_put_contents($debugFile, $errorMsg, FILE_APPEND);
+
+            // Return simplified response to API
+            return [
+                "success" => false,
+                "message" => "Failed to fetch orders. Please try again later."
+            ];
+        }
     }
+
 
     public function updateStatus($request, $userId, $orderId)
     {
