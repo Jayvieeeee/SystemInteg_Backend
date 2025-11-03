@@ -167,7 +167,6 @@ class OrderController
         ];
     }
 
-    // GET /orders
     public function getUserOrders($userId)
     {
         $orders = $this->orderModel->getOrdersByUserId($userId);
@@ -188,7 +187,6 @@ class OrderController
         ];
     }
 
-    // GET /orders/stats
     public function getOrderStats($userId)
     {
         $stats = $this->orderModel->getOrderStatsByUser($userId);
@@ -209,6 +207,21 @@ class OrderController
         return [
             'success' => true,
             'data' => $orders
+        ];
+    }
+    public function cancelOrderCustomer($request, $userId, $orderId)
+    {
+        $result = $this->orderModel->cancelOrderCustomer($orderId, $userId);
+
+        if (!$result['success']) {
+            throw new ValidationException($result['message'], 422);
+        }
+
+        return [
+            'success' => true,
+            'message' => $result['message'],
+            'order_id' => $orderId,
+            'status' => 'cancelled'
         ];
     }
 }

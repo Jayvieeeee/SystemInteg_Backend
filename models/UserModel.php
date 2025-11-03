@@ -57,6 +57,33 @@ class UserModel
         return $this->findById($user_id);
     }
 
+    public function findByVerificationToken($token)
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM users WHERE verification_token = ? AND deleted_at IS NULL");
+        $stmt->bind_param("s", $token);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
+    }
+
+    public function verifyEmail($userId)
+    {
+        $stmt = $this->conn->prepare("UPDATE users SET 
+        is_verified = 1, 
+        verification_token = NULL,
+        email_verified_at = NOW(),
+        updated_at = NOW()
+        WHERE id = ?");
+
+        $stmt->bind_param("i", $userId);
+
+        if (!$stmt->execute()) {
+            throw new Exception("Email verification failed: " . $stmt->error);
+        }
+
+        return true;
+    }
+
 
 
     public function findById($userId)

@@ -58,7 +58,6 @@ class GallonController
             return false;
         }
 
-        // ✅ FIXED: Changed DIR to _DIR_
         $uploadDir = __DIR__ . '/../images/';
 
         if (!is_dir($uploadDir)) {
@@ -70,7 +69,6 @@ class GallonController
         $uploadPath = $uploadDir . $filename;
 
         if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
-            // ✅ Return the full URL path, not just filename
             return '/images/' . $filename;
         }
 
@@ -80,12 +78,9 @@ class GallonController
     public function updateGallon($request, $userId, $id)
     {
         $uploadedImagePath = null;
-
-        // ✅ Handle file upload if present
         if (isset($request['_files']['image']) && $request['_files']['image']['error'] === UPLOAD_ERR_OK) {
             $uploadedImagePath = $this->handleImageUpload($request['_files']['image']);
 
-            // ✅ Optional: Delete old image
             $existingGallon = $this->gallonModel->getById($id);
             if ($existingGallon && !empty($existingGallon['image_url'])) {
                 $oldImagePath = __DIR__ . '/../' . $existingGallon['image_url'];
@@ -95,7 +90,6 @@ class GallonController
             }
         }
 
-        // ✅ FIXED: Build update data differently
         $updateData = [];
 
         // Always include these fields if they exist in request
@@ -116,7 +110,6 @@ class GallonController
             $updateData['image_url'] = $request['image_url'];
         }
 
-        // ✅ FIXED: Check if we actually have fields to update
         if (empty($updateData)) {
             return [
                 'success' => false,
@@ -129,7 +122,6 @@ class GallonController
 
         $result = $this->gallonModel->update((int)$id, $updateData);
 
-        // ✅ FIXED: Return proper response format
         return [
             'success' => $result !== false,
             'message' => $result !== false ? 'Gallon updated successfully' : 'Failed to update gallon',

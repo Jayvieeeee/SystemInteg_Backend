@@ -36,7 +36,7 @@ class AuthController
             'user_id' => $user['user_id'],
             'role' => $user['role'],
             'iat' => time(),
-            'exp' => time() + 3600,
+            'exp' => time() + (86400 * 7),
             'jti' => bin2hex(random_bytes(16))
         ];
 
@@ -82,6 +82,52 @@ class AuthController
         ];
     }
 
+    public function verifyEmail()
+    {
+        // Get token from query string
+        $token = $_GET['token'] ?? null;
+
+        if (!$token) {
+            http_response_code(400);
+            return [
+                "error" => true,
+                "message" => "Verification token is required"
+            ];
+        }
+
+        // Find user by verification token
+        $user = $this->userModel->findByVerificationToken($token);
+
+        if (!$user) {
+            http_response_code(404);
+            return [
+                "error" => true,
+                "message" => "Invalid or expired verification token"
+            ];
+        }
+
+        // Check if already verified
+        if ($user['is_verified']) {
+            return [
+                "error" => false,
+                "message" => "Email already verified",
+                "redirect" => "/customer/dashboard"
+            ];
+        }
+
+        // Update user verification status
+        $this->userModel->verifyEmail($user['id']);
+
+        // Send welcome email after successful verification
+        // Change this to sendWelcomeEmail if you have that method
+        $this->emailService->sendWelcomeEmail($user);
+
+        return [
+            "error" => false,
+            "message" => "Email verified successfully! You can now login.",
+            "redirect" => "/customer/dashboard"
+        ];
+    }
 
     public function forgotPassword($data)
     {

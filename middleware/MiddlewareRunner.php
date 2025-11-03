@@ -13,7 +13,7 @@ class MiddlewareRunner
         foreach ($this->middlewares as $middleware) {
             $result = $middleware->handle($request);
             if ($result) {
-                $request = $result; // if may binago update
+                $request = $result;
             }
         }
         return $request;

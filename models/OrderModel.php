@@ -9,17 +9,37 @@ class OrderModel
         $this->conn = $conn;
     }
 
-    // Create order with direct items
+    // Add this method sa Order model
+    private function generateOrderId()
+    {
+        // Generate 4 random letters + 4 random digits (e.g., ABCD1234)
+        $letters = strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 4));
+        $digits = rand(1000, 9999);
+        return $letters . $digits;
+    }
+
+    // Modified create method
     public function create($data)
     {
         $this->conn->begin_transaction();
         try {
+            // Generate unique order_id
+            do {
+                $orderId = $this->generateOrderId();
+                $checkStmt = $this->conn->prepare("SELECT order_id FROM orders WHERE order_id = ?");
+                $checkStmt->bind_param("s", $orderId);
+                $checkStmt->execute();
+                $exists = $checkStmt->get_result()->num_rows > 0;
+                $checkStmt->close();
+            } while ($exists);
+
             $stmt = $this->conn->prepare("
-                INSERT INTO orders (user_id, address_id, pickup_datetime, payment_method, total_price)
-                VALUES (?, ?, ?, ?, ?)
-            ");
+            INSERT INTO orders (order_id, user_id, address_id, pickup_datetime, payment_method, total_price)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ");
             $stmt->bind_param(
-                "iissd",
+                "siissd",
+                $orderId,
                 $data['user_id'],
                 $data['address_id'],
                 $data['pickup_datetime'],
@@ -27,17 +47,16 @@ class OrderModel
                 $data['total_price']
             );
             $stmt->execute();
-            $orderId = $this->conn->insert_id;
             $stmt->close();
 
             $stmtItem = $this->conn->prepare("
-                INSERT INTO order_items (order_id, gallon_id, quantity, price, total_price)
-                VALUES (?, ?, ?, ?, ?)
-            ");
+            INSERT INTO order_items (order_id, gallon_id, quantity, price, total_price)
+            VALUES (?, ?, ?, ?, ?)
+        ");
 
             foreach ($data['items'] as $item) {
                 $stmtItem->bind_param(
-                    "iiidd",
+                    "siidd",
                     $orderId,
                     $item['gallon_id'],
                     $item['quantity'],
@@ -56,18 +75,29 @@ class OrderModel
         }
     }
 
-    // Create order from cart
+    // Create order from cart - FIXED: order_id is now varchar
     public function createFromCart($userId, $cartItems, $data)
     {
         $this->conn->begin_transaction();
         try {
-            // Insert into orders
+            // Generate unique order_id
+            do {
+                $orderId = $this->generateOrderId();
+                $checkStmt = $this->conn->prepare("SELECT order_id FROM orders WHERE order_id = ?");
+                $checkStmt->bind_param("s", $orderId);
+                $checkStmt->execute();
+                $exists = $checkStmt->get_result()->num_rows > 0;
+                $checkStmt->close();
+            } while ($exists);
+
+            // Insert into orders with generated order_id
             $stmt = $this->conn->prepare("
-                INSERT INTO orders (user_id, address_id, pickup_datetime, payment_method, total_price)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO orders (order_id, user_id, address_id, pickup_datetime, payment_method, total_price)
+                VALUES (?, ?, ?, ?, ?, ?)
             ");
             $stmt->bind_param(
-                "iissd",
+                "siissd",
+                $orderId,
                 $userId,
                 $data['address_id'],
                 $data['pickup_datetime'],
@@ -75,7 +105,6 @@ class OrderModel
                 $data['total_price']
             );
             $stmt->execute();
-            $orderId = $this->conn->insert_id;
             $stmt->close();
 
             // Insert order items from cart
@@ -86,7 +115,7 @@ class OrderModel
 
             foreach ($cartItems as $item) {
                 $stmtItem->bind_param(
-                    "iiidd",
+                    "siidd",
                     $orderId,
                     $item['gallon_id'],
                     $item['quantity'],
@@ -97,7 +126,7 @@ class OrderModel
             }
             $stmtItem->close();
 
-            // Delete selected cart items - FIXED: Use prepared statement
+            // Delete selected cart items
             $cartIds = array_column($cartItems, 'cart_id');
             if (!empty($cartIds)) {
                 $placeholders = implode(',', array_fill(0, count($cartIds), '?'));
@@ -138,7 +167,7 @@ class OrderModel
         return $result;
     }
 
-    // Get selected cart items - FIXED: Handle empty results
+    // Get selected cart items
     public function getSelectedCartItems($userId, $cartItemIds)
     {
         if (empty($cartItemIds)) {
@@ -175,7 +204,7 @@ class OrderModel
         return $result ?: [];
     }
 
-    // Get order by ID - FIXED: Handle not found
+    // Get order by ID - FIXED: order_id is varchar
     public function getById($id)
     {
         $stmt = $this->conn->prepare("
@@ -184,15 +213,15 @@ class OrderModel
             LEFT JOIN addresses a ON o.address_id = a.address_id
             WHERE o.order_id = ?
         ");
-        $stmt->bind_param("i", $id);
+        $stmt->bind_param("s", $id);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        return $result; // Return null if not found
+        return $result;
     }
 
-    // Get items for an order - FIXED: Include gallon details
+    // Get items for an order - FIXED: order_id is varchar
     public function getOrderItems($orderId)
     {
         $stmt = $this->conn->prepare("
@@ -201,7 +230,7 @@ class OrderModel
             JOIN gallons g ON oi.gallon_id = g.gallon_id
             WHERE oi.order_id = ?
         ");
-        $stmt->bind_param("i", $orderId);
+        $stmt->bind_param("s", $orderId);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
@@ -209,7 +238,7 @@ class OrderModel
         return $result ?: [];
     }
 
-    // Get all orders by user - FIXED: Include address info
+    // Get all orders by user
     public function getOrdersByUserId($userId)
     {
         $stmt = $this->conn->prepare("
@@ -227,14 +256,14 @@ class OrderModel
         return $result ?: [];
     }
 
-    // Additional helper method to check order ownership
+    // Check order ownership - FIXED: order_id is varchar
     public function isOrderOwnedByUser($orderId, $userId)
     {
         $stmt = $this->conn->prepare("
             SELECT order_id FROM orders 
             WHERE order_id = ? AND user_id = ?
         ");
-        $stmt->bind_param("ii", $orderId, $userId);
+        $stmt->bind_param("si", $orderId, $userId);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
@@ -246,19 +275,27 @@ class OrderModel
     {
         $stats = [];
 
-        // Pending Orders
         $query = "SELECT COUNT(*) as count FROM orders WHERE status = 'pending'";
         $stats['pending'] = $this->conn->query($query)->fetch_assoc()['count'];
 
-        // delivered Orders
+        $query = "SELECT COUNT(*) as count FROM orders WHERE status = 'preparing'";
+        $stats['preparing'] = $this->conn->query($query)->fetch_assoc()['count'];
+
+        $query = "SELECT COUNT(*) as count FROM orders WHERE status = 'to_pickup'";
+        $stats['to_pickup'] = $this->conn->query($query)->fetch_assoc()['count'];
+
+        $query = "SELECT COUNT(*) as count FROM orders WHERE status = 'to_deliver'";
+        $stats['to_deliver'] = $this->conn->query($query)->fetch_assoc()['count'];
+
         $query = "SELECT COUNT(*) as count FROM orders WHERE status = 'delivered'";
         $stats['delivered'] = $this->conn->query($query)->fetch_assoc()['count'];
 
-        // Cancelled Orders
         $query = "SELECT COUNT(*) as count FROM orders WHERE status = 'cancelled'";
         $stats['cancelled'] = $this->conn->query($query)->fetch_assoc()['count'];
 
-        // Total Orders
+        $query = "SELECT COUNT(*) as count FROM orders WHERE status = 'delivered' AND DATE(delivered_at) = CURDATE()";
+        $stats['completed_today'] = $this->conn->query($query)->fetch_assoc()['count'];
+
         $query = "SELECT COUNT(*) as count FROM orders";
         $stats['total'] = $this->conn->query($query)->fetch_assoc()['count'];
 
@@ -280,7 +317,6 @@ class OrderModel
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
 
-        // convert nulls to 0
         return [
             'pending' => (int) ($result['pending'] ?? 0),
             'delivered' => (int) ($result['delivered'] ?? 0),
@@ -288,7 +324,6 @@ class OrderModel
             'total' => (int) ($result['total'] ?? 0)
         ];
     }
-
 
     public function getLatestOrders($limit = 5)
     {
@@ -319,7 +354,6 @@ class OrderModel
         return $result->fetch_all(MYSQLI_ASSOC) ?: [];
     }
 
-
     public function getLatestOrdersByCustomer($customerId, $limit = 5)
     {
         $query = "SELECT 
@@ -346,13 +380,12 @@ class OrderModel
         return $result->fetch_all(MYSQLI_ASSOC) ?: [];
     }
 
-
-
+    // Update payment status - FIXED: order_id is varchar
     public function updatePaymentStatus($orderId, $status, $paymentMethod)
     {
         $query = "UPDATE orders SET payment_status = ?, payment_method = ? WHERE order_id = ?";
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("ssi", $status, $paymentMethod, $orderId);
+        $stmt->bind_param("sss", $status, $paymentMethod, $orderId);
 
         return $stmt->execute();
     }
@@ -368,6 +401,7 @@ class OrderModel
         a.address,
         GROUP_CONCAT(CONCAT(g.name, ' x', oi.quantity) SEPARATOR ', ') AS products,
         o.total_price,
+        o.pickup_datetime,
         DATE_FORMAT(o.created_at, '%m-%d-%Y %h:%i%p') AS date_time,
         o.status
     FROM orders o
@@ -398,6 +432,7 @@ class OrderModel
         return $orders;
     }
 
+    // Get order by ID - FIXED: order_id is varchar
     public function getOrderById($orderId)
     {
         $stmt = $this->conn->prepare("
@@ -409,7 +444,7 @@ class OrderModel
             LEFT JOIN addresses a ON o.address_id = a.address_id
             WHERE o.order_id = ?
         ");
-        $stmt->bind_param("i", $orderId);
+        $stmt->bind_param("s", $orderId);
         $stmt->execute();
         $order = $stmt->get_result()->fetch_assoc();
         $stmt->close();
@@ -418,14 +453,14 @@ class OrderModel
             return null;
         }
 
-        // Add order items din para complete view sa admin
+        // Add order items
         $stmtItems = $this->conn->prepare("
             SELECT oi.*, g.name AS gallon_name, g.image_url
             FROM order_items oi
             JOIN gallons g ON oi.gallon_id = g.gallon_id
             WHERE oi.order_id = ?
         ");
-        $stmtItems->bind_param("i", $orderId);
+        $stmtItems->bind_param("s", $orderId);
         $stmtItems->execute();
         $order['items'] = $stmtItems->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmtItems->close();
@@ -436,9 +471,6 @@ class OrderModel
         return $order;
     }
 
-    /**
-     * Get all orders filtered by status (for admin filters)
-     */
     public function getOrdersByStatus($status)
     {
         $stmt = $this->conn->prepare("
@@ -463,9 +495,7 @@ class OrderModel
         return $result;
     }
 
-    /**
-     * Update order status (for admin actions)
-     */
+    // Update order status - FIXED: order_id is varchar
     public function updateStatus($orderId, $newStatus)
     {
         $stmt = $this->conn->prepare("
@@ -473,11 +503,39 @@ class OrderModel
             SET status = ? 
             WHERE order_id = ?
         ");
-        $stmt->bind_param("si", $newStatus, $orderId);
+        $stmt->bind_param("ss", $newStatus, $orderId);
         $success = $stmt->execute();
         $stmt->close();
 
         return $success;
+    }
+
+    public function getOrdersByCustomerId($customerId)
+    {
+        $query = "SELECT 
+                o.order_id,
+                o.status,
+                o.total_price,
+                o.payment_method,
+                o.pickup_datetime,
+                g.name AS gallon_name
+              FROM orders o
+              LEFT JOIN order_items oi ON o.order_id = oi.order_id
+              LEFT JOIN gallons g ON oi.gallon_id = g.gallon_id
+              WHERE o.user_id = ?
+              ORDER BY o.created_at DESC";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param('i', $customerId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $orders = [];
+        while ($row = $result->fetch_assoc()) {
+            $orders[] = $row;
+        }
+
+        return $orders;
     }
 
     public function getOrdersForActiveRider()
@@ -520,7 +578,7 @@ class OrderModel
 
             $rawData = $result->fetch_all(MYSQLI_ASSOC);
 
-            // ✅ Group per order_id (combine multiple gallons)
+            // Group per order_id
             $orders = [];
             foreach ($rawData as $row) {
                 $orderId = $row['order_id'];
@@ -550,13 +608,7 @@ class OrderModel
                 }
             }
 
-            $orders = array_values($orders);
-
-            // Debug log
-            $debugFile = __DIR__ . "/../logs/debug.log";
-            file_put_contents($debugFile, "[" . date("Y-m-d H:i:s") . "] Grouped Orders: " . print_r($orders, true) . PHP_EOL, FILE_APPEND);
-
-            return $orders;
+            return array_values($orders);
         } catch (Exception $e) {
             $debugFile = __DIR__ . "/../logs/debug.log";
             file_put_contents($debugFile, "[" . date("Y-m-d H:i:s") . "] Error: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
@@ -564,19 +616,71 @@ class OrderModel
         }
     }
 
-
-
-    // Update order status (picked_up / delivered)
+    // Update order status (rider) - FIXED: order_id is varchar
     public function riderUpdateStatus($orderId, $newStatus)
     {
         if (!in_array($newStatus, ['picked_up', 'delivered'])) {
             throw new Exception("Invalid status");
         }
 
-        $stmt = $this->conn->prepare("UPDATE orders SET status = ? WHERE order_id = ?");
-        $stmt->bind_param("si", $newStatus, $orderId);
+        if ($newStatus === 'delivered') {
+            $stmt = $this->conn->prepare("
+            UPDATE orders 
+            SET status = ?, delivered_at = NOW() 
+            WHERE order_id = ?
+        ");
+        } else {
+            $stmt = $this->conn->prepare("
+            UPDATE orders 
+            SET status = ? 
+            WHERE order_id = ?
+        ");
+        }
+
+        $stmt->bind_param("ss", $newStatus, $orderId);
         $stmt->execute();
         return $stmt->affected_rows;
+    }
+
+    public function getDeliveriesByRiderId($riderId)
+    {
+        $query = "SELECT 
+                o.order_id,
+                o.user_id AS customer_id,
+                o.status,
+                o.total_price,
+                o.payment_method,
+                o.created_at,
+                c.first_name AS customer_first_name,
+                c.last_name AS customer_last_name,
+                a.label AS address_label,
+                a.address AS full_address
+              FROM orders o
+              JOIN users c ON o.user_id = c.user_id
+              LEFT JOIN addresses a ON o.address_id = a.address_id
+              WHERE o.status = 'completed'
+              ORDER BY o.created_at DESC";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $deliveries = [];
+        while ($row = $result->fetch_assoc()) {
+            $deliveries[] = [
+                'order_id' => $row['order_id'],
+                'customer_name' => $row['customer_first_name'] . ' ' . $row['customer_last_name'],
+                'status' => $row['status'],
+                'total_price' => $row['total_price'],
+                'payment_method' => $row['payment_method'],
+                'address' => $row['address_label']
+                    ? $row['address_label'] . ' - ' . $row['full_address']
+                    : $row['full_address'],
+                'created_at' => $row['created_at']
+            ];
+        }
+
+        return $deliveries;
     }
 
     public function getSalesRevenue()
@@ -604,16 +708,25 @@ class OrderModel
         return $revenue;
     }
 
+    public function getOrdersToPickup()
+    {
+        $query = "SELECT COUNT(*) as count FROM orders 
+              WHERE status = 'to_pickup'";
+        return $this->conn->query($query)->fetch_assoc()['count'];
+    }
+
+    public function getOrdersToDeliver()
+    {
+        $query = "SELECT COUNT(*) as count FROM orders 
+              WHERE status = 'to_deliver'";
+        return $this->conn->query($query)->fetch_assoc()['count'];
+    }
 
     public function getTotalCustomers()
     {
         $query = "SELECT COUNT(*) as count FROM users WHERE role = 'customer'";
         return $this->conn->query($query)->fetch_assoc()['count'];
     }
-
-    // In OrderModel class - add this method:
-
-    // In OrderModel class - update this method:
 
     public function getDeliveredOrders()
     {
@@ -644,12 +757,51 @@ class OrderModel
             JOIN gallons g ON oi.gallon_id = g.gallon_id
             WHERE oi.order_id = ?
         ");
-            $stmtItems->bind_param("i", $order['order_id']);
+            $stmtItems->bind_param("s", $order['order_id']);
             $stmtItems->execute();
             $order['items'] = $stmtItems->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmtItems->close();
         }
 
         return $orders;
+    }
+
+    // Cancel order (customer) - FIXED: order_id is varchar
+    public function cancelOrderCustomer($orderId, $userId)
+    {
+        // Check if order exists and belongs to the user
+        $stmt = $this->conn->prepare("
+        SELECT status FROM orders
+        WHERE order_id = ? AND user_id = ?
+    ");
+        $stmt->bind_param("si", $orderId, $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows === 0) {
+            return ['success' => false, 'message' => 'Order not found or not owned by user'];
+        }
+
+        $order = $result->fetch_assoc();
+
+        // Only pending orders can be cancelled
+        if ($order['status'] !== 'pending') {
+            return ['success' => false, 'message' => 'Only pending orders can be cancelled'];
+        }
+
+        // Update status to cancelled
+        $update = $this->conn->prepare("
+        UPDATE orders 
+        SET status = 'cancelled' 
+        WHERE order_id = ? AND user_id = ?
+    ");
+        $update->bind_param("si", $orderId, $userId);
+        $update->execute();
+
+        if ($update->affected_rows > 0) {
+            return ['success' => true, 'message' => 'Order cancelled successfully'];
+        }
+
+        return ['success' => false, 'message' => 'Failed to cancel order'];
     }
 }

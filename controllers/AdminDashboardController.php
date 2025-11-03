@@ -24,8 +24,6 @@ class AdminDashboardController
         $recentOrders = $this->orderModel->getLatestOrders(5);
         $allOrders = $this->orderModel->getAllOrders();
         $totalCustomers = $this->orderModel->getTotalCustomers();
-        // $ordersToPickup = $this->orderModel->getOrdersToPickup();
-        // $ordersToDeliver = $this->orderModel->getOrdersToDeliver();
 
         return [
             'success' => true,
@@ -44,12 +42,14 @@ class AdminDashboardController
                 'order_status_distribution' => [
                     'pending' => $stats['pending'] ?? 0,
                     'preparing' => $stats['preparing'] ?? 0,
-                    'delivered' => $stats['delivered'] ?? 0
+                    'to_pickup' => $stats['to_pickup'] ?? 0,
+                    'to_deliver' => $stats['to_deliver'] ?? 0,
+                    'delivered' => $stats['delivered'] ?? 0,
+                    'cancelled' => $stats['cancelled'] ?? 0,
+                    'total' => $stats['total'] ?? 0
                 ],
-                'recent_orders' => $recentOrders,  // Latest 10
-                'all_orders' => $allOrders,        // ALL orders from database
-                // 'orders_to_pickup' => $ordersToPickup,
-                // 'orders_to_deliver' => $ordersToDeliver
+                'recent_orders' => $recentOrders,
+                'all_orders' => $allOrders,
             ]
         ];
     }

@@ -3,6 +3,7 @@ return [
     // Auth
     ['path' => '/register',          'method' => 'POST', 'controller' => 'AuthController', 'action' => 'register', 'auth' => false],
     ['path' => '/login',             'method' => 'POST', 'controller' => 'AuthController', 'action' => 'login', 'auth' => false],
+    ['path' => '/verify-email',      'method' => 'GET',  'controller' => 'AuthController', 'action' => 'verifyEmail', 'auth' => false],
     ['path' => '/forgot-password',   'method' => 'POST', 'controller' => 'AuthController', 'action' => 'forgotPassword', 'auth' => false],
     ['path' => '/verify-reset-code', 'method' => 'POST', 'controller' => 'AuthController', 'action' => 'verifyResetCode', 'auth' => false],
     ['path' => '/reset-password',    'method' => 'POST', 'controller' => 'AuthController', 'action' => 'resetPassword', 'auth' => false],
@@ -23,6 +24,7 @@ return [
     ['path' => '/orders',            'method' => 'POST',   'controller' => 'OrderController',   'action' => 'createOrder',       'auth' => true],
     ['path' => '/orders',            'method' => 'GET',    'controller' => 'OrderController',   'action' => 'getUserOrders',     'auth' => true],
     ['path' => '/orders/{id}',       'method' => 'GET',    'controller' => 'OrderController',   'action' => 'getOrder',          'auth' => true],
+    ['path' => '/orders/{id}/cancel', 'method' => 'POST', 'controller' => 'OrderController', 'action' => 'cancelOrderCustomer', 'auth' => true],
 
     // Addresses
     ['path' => '/addresses',         'method' => 'GET',    'controller' => 'AddressController', 'action' => 'getUserAddresses',  'auth' => true],
@@ -59,7 +61,7 @@ return [
     ['path' => '/admin/customers/{id}', 'method' => 'GET', 'controller' => 'AdminCustomerController', 'action' => 'show', 'auth' => true, 'role' => 'admin'],
 
 
-    ['path' => '/dashboard/stats', 'method' => 'GET', 'controller' => 'AdminDashboardController', 'action' => 'getDashboardStats', 'auth' => true, 'role' => 'admin'],
+    ['path' => '/dashboard/stats', 'method' => 'GET', 'controller' => 'AdminDashboardController', 'action' => 'getDashboardStats', 'auth' => true],
 
     // Admin RidersPage
     ['path' => '/admin/riders', 'method' => 'GET', 'controller' => 'AdminRiderController', 'action' => 'index', 'auth' => true, 'role' => 'admin'],
