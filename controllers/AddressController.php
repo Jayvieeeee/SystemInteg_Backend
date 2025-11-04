@@ -81,7 +81,6 @@ class AddressController
         ];
     }
 
-
     public function updateAddress($data, $userId, $id)
     {
         $address = $this->addressModel->getAddressById($id, $userId);
@@ -93,10 +92,17 @@ class AddressController
             throw new ValidationException("Label cannot be empty", 422);
         }
 
+        $isDefault = isset($data['is_default']) ? ($data['is_default'] ? 1 : 0) : $address['is_default'];
+
+        // ✅ If user set this as default, remove default from others
+        if ($isDefault) {
+            $this->addressModel->unsetOtherDefaults($userId, $id);
+        }
+
         $updateData = [
             'label' => $data['label'] ?? $address['label'],
             'address' => $data['address'] ?? $address['address'],
-            'is_default' => isset($data['is_default']) ? ($data['is_default'] ? 1 : 0) : $address['is_default']
+            'is_default' => $isDefault
         ];
 
         $result = $this->addressModel->update($id, $updateData, $userId);

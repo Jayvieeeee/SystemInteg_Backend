@@ -41,7 +41,6 @@ if (strpos($uri, '/api') === 0) {
 $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 
 if (strpos($contentType, 'multipart/form-data') !== false) {
-    // ✅ FIX: Don't merge - keep $_POST and add _files as separate key
     $inputData = $_POST;
     if (!empty($_FILES)) {
         $inputData['_files'] = $_FILES;
@@ -84,12 +83,27 @@ try {
     }
 
     // Add validation middleware for specific actions
-    if (in_array($matched['action'], ['register', 'login'])) {
+    if (in_array($matched['action'], ['register', 'login', 'updateProfile', 'changePassword', 'createGallon', 'updateGallon'])) {
         $fields = [];
+
         if ($matched['action'] === 'register') {
             $fields = ['first_name', 'last_name', 'email', 'username', 'password', 'contact_no'];
         } elseif ($matched['action'] === 'login') {
             $fields = ['identifier' => 'Username or email', 'password' => 'Password'];
+        } elseif ($matched['action'] === 'updateProfile') {
+            $fields = ['first_name', 'last_name', 'email', 'contact_no'];
+        } elseif ($matched['action'] === 'changePassword') {
+            $fields = [
+                'old_password' => 'Old password',
+                'new_password' => 'New password',
+                'confirm_password' => 'Confirm password'
+            ];
+        } elseif ($matched['action'] === 'createGallon') {
+            // All fields required including image
+            $fields = ['name', 'size', 'price'];
+        } elseif ($matched['action'] === 'updateGallon') {
+            // All fields optional (including image)
+            $fields = ['name', 'size', 'price'];
         }
 
         $runner->add($container->get('validateMiddleware', [
@@ -97,7 +111,6 @@ try {
             'route'  => $matched['action']
         ]));
     }
-
     // Run all middlewares
     $request = $runner->run($inputData);
 

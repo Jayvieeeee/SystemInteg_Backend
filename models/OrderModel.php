@@ -18,7 +18,6 @@ class OrderModel
         return $letters . $digits;
     }
 
-    // Modified create method
     public function create($data)
     {
         $this->conn->begin_transaction();
@@ -33,27 +32,32 @@ class OrderModel
                 $checkStmt->close();
             } while ($exists);
 
+            // ✅ Get active rider (kung meron)
+            $riderId = $this->getActiveRiderId();
+
+            // ✅ Insert order + include rider_id
             $stmt = $this->conn->prepare("
-            INSERT INTO orders (order_id, user_id, address_id, pickup_datetime, payment_method, total_price)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO orders (order_id, user_id, address_id, pickup_datetime, payment_method, total_price, rider_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
             $stmt->bind_param(
-                "siissd",
+                "siissdi",
                 $orderId,
                 $data['user_id'],
                 $data['address_id'],
                 $data['pickup_datetime'],
                 $data['payment_method'],
-                $data['total_price']
+                $data['total_price'],
+                $riderId
             );
             $stmt->execute();
             $stmt->close();
 
+            // Insert order items
             $stmtItem = $this->conn->prepare("
             INSERT INTO order_items (order_id, gallon_id, quantity, price, total_price)
             VALUES (?, ?, ?, ?, ?)
         ");
-
             foreach ($data['items'] as $item) {
                 $stmtItem->bind_param(
                     "siidd",
@@ -73,6 +77,19 @@ class OrderModel
             $this->conn->rollback();
             throw $e;
         }
+    }
+
+    private function getActiveRiderId()
+    {
+        $stmt = $this->conn->prepare("
+        SELECT user_id FROM users 
+        WHERE role = 'rider' AND status = 'active' 
+        LIMIT 1
+    ");
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $rider = $result->fetch_assoc();
+        return $rider ? $rider['user_id'] : null;
     }
 
     // Create order from cart - FIXED: order_id is now varchar
@@ -242,12 +259,44 @@ class OrderModel
     public function getOrdersByUserId($userId)
     {
         $stmt = $this->conn->prepare("
-            SELECT o.*, a.label as address_label, a.address as full_address
-            FROM orders o
-            LEFT JOIN addresses a ON o.address_id = a.address_id
-            WHERE o.user_id = ? 
-            ORDER BY o.created_at DESC
-        ");
+        SELECT 
+            o.order_id,
+            o.user_id,
+            o.address_id,
+            o.pickup_datetime,
+            o.payment_method,
+            o.payment_status,
+            o.total_price,
+            o.status,
+            o.created_at,
+            o.updated_at,
+            o.delivered_at,
+            o.rider_id,
+            a.label as address_label, 
+            a.address as full_address,
+            GROUP_CONCAT(CONCAT(g.name, ' x', oi.quantity) SEPARATOR ', ') AS products
+        FROM orders o
+        LEFT JOIN addresses a ON o.address_id = a.address_id
+        LEFT JOIN order_items oi ON o.order_id = oi.order_id
+        LEFT JOIN gallons g ON oi.gallon_id = g.gallon_id
+        WHERE o.user_id = ?
+        GROUP BY 
+            o.order_id,
+            o.user_id,
+            o.address_id,
+            o.pickup_datetime,
+            o.payment_method,
+            o.payment_status,
+            o.total_price,
+            o.status,
+            o.created_at,
+            o.updated_at,
+            o.delivered_at,
+            o.rider_id,
+            a.label,
+            a.address
+        ORDER BY o.created_at DESC
+    ");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -394,33 +443,38 @@ class OrderModel
     {
         $query = "
         SELECT 
-        o.order_id,
-        o.user_id,
-        CONCAT(u.first_name, ' ', u.last_name) AS customer_name,
-        u.contact_no,
-        a.address,
-        GROUP_CONCAT(CONCAT(g.name, ' x', oi.quantity) SEPARATOR ', ') AS products,
-        o.total_price,
-        o.pickup_datetime,
-        DATE_FORMAT(o.created_at, '%m-%d-%Y %h:%i%p') AS date_time,
-        o.status
-    FROM orders o
-    JOIN users u ON o.user_id = u.user_id
-    JOIN order_items oi ON o.order_id = oi.order_id
-    JOIN gallons g ON oi.gallon_id = g.gallon_id
-    JOIN addresses a ON a.user_id = u.user_id
-    GROUP BY 
-        o.order_id, 
-        o.user_id, 
-        u.first_name, 
-        u.last_name, 
-        u.contact_no, 
-        a.address, 
-        o.total_price, 
-        o.created_at, 
-        o.status
-    ORDER BY o.created_at DESC
-        ";
+            o.order_id,
+            o.user_id,
+            CONCAT(u.first_name, ' ', u.last_name) AS customer_name,
+            u.contact_no,
+            a.address,
+            GROUP_CONCAT(CONCAT(g.name, ' x', oi.quantity) SEPARATOR ', ') AS products,
+            o.total_price,
+            o.pickup_datetime,
+            o.payment_method,
+            o.payment_status,
+            DATE_FORMAT(o.created_at, '%m-%d-%Y %h:%i%p') AS date_time,
+            o.status
+        FROM orders o
+        JOIN users u ON o.user_id = u.user_id
+        JOIN order_items oi ON o.order_id = oi.order_id
+        JOIN gallons g ON oi.gallon_id = g.gallon_id
+        JOIN addresses a ON o.address_id = a.address_id
+        GROUP BY 
+            o.order_id, 
+            o.user_id, 
+            u.first_name, 
+            u.last_name, 
+            u.contact_no, 
+            a.address, 
+            o.total_price, 
+            o.pickup_datetime,
+            o.payment_method,
+            o.payment_status,
+            o.created_at, 
+            o.status
+        ORDER BY o.created_at DESC
+    ";
 
         $result = $this->conn->query($query);
         $orders = [];
@@ -432,18 +486,22 @@ class OrderModel
         return $orders;
     }
 
-    // Get order by ID - FIXED: order_id is varchar
+
     public function getOrderById($orderId)
     {
         $stmt = $this->conn->prepare("
-            SELECT o.*, 
-                   u.first_name, u.last_name, 
-                   a.label AS address_label, a.address AS full_address
-            FROM orders o
-            JOIN users u ON o.user_id = u.user_id
-            LEFT JOIN addresses a ON o.address_id = a.address_id
-            WHERE o.order_id = ?
-        ");
+        SELECT o.*, 
+               u.first_name, u.last_name, 
+               GROUP_CONCAT(CONCAT(g.name, ' x', oi.quantity) SEPARATOR ', ') AS products,
+               a.label AS address_label, a.address AS full_address
+        FROM orders o
+        JOIN users u ON o.user_id = u.user_id
+        LEFT JOIN order_items oi ON o.order_id = oi.order_id
+        LEFT JOIN gallons g ON oi.gallon_id = g.gallon_id
+        LEFT JOIN addresses a ON o.address_id = a.address_id
+        WHERE o.order_id = ?
+        GROUP BY o.order_id
+    ");
         $stmt->bind_param("s", $orderId);
         $stmt->execute();
         $order = $stmt->get_result()->fetch_assoc();
@@ -455,11 +513,11 @@ class OrderModel
 
         // Add order items
         $stmtItems = $this->conn->prepare("
-            SELECT oi.*, g.name AS gallon_name, g.image_url
-            FROM order_items oi
-            JOIN gallons g ON oi.gallon_id = g.gallon_id
-            WHERE oi.order_id = ?
-        ");
+        SELECT oi.*, g.name AS gallon_name, g.image_url
+        FROM order_items oi
+        JOIN gallons g ON oi.gallon_id = g.gallon_id
+        WHERE oi.order_id = ?
+    ");
         $stmtItems->bind_param("s", $orderId);
         $stmtItems->execute();
         $order['items'] = $stmtItems->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -470,7 +528,6 @@ class OrderModel
 
         return $order;
     }
-
     public function getOrdersByStatus($status)
     {
         $stmt = $this->conn->prepare("
@@ -513,17 +570,18 @@ class OrderModel
     public function getOrdersByCustomerId($customerId)
     {
         $query = "SELECT 
-                o.order_id,
-                o.status,
-                o.total_price,
-                o.payment_method,
-                o.pickup_datetime,
-                g.name AS gallon_name
-              FROM orders o
-              LEFT JOIN order_items oi ON o.order_id = oi.order_id
-              LEFT JOIN gallons g ON oi.gallon_id = g.gallon_id
-              WHERE o.user_id = ?
-              ORDER BY o.created_at DESC";
+            o.order_id,
+            o.status,
+            o.total_price,
+            o.payment_method,
+            o.pickup_datetime,
+            GROUP_CONCAT(CONCAT(g.name, ' x', oi.quantity) SEPARATOR ', ') AS products
+          FROM orders o
+          LEFT JOIN order_items oi ON o.order_id = oi.order_id
+          LEFT JOIN gallons g ON oi.gallon_id = g.gallon_id
+          WHERE o.user_id = ?
+          GROUP BY o.order_id, o.status, o.total_price, o.payment_method, o.pickup_datetime
+          ORDER BY o.created_at DESC";
 
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param('i', $customerId);
@@ -541,10 +599,23 @@ class OrderModel
     public function getOrdersForActiveRider()
     {
         try {
+            // Step 1: Get active rider
+            $riderQuery = "SELECT user_id FROM users WHERE role = 'rider' AND status = 'active' LIMIT 1";
+            $riderResult = $this->conn->query($riderQuery);
+            $riderRow = $riderResult->fetch_assoc();
+
+            if (!$riderRow) {
+                return []; // no active rider
+            }
+
+            $activeRiderId = $riderRow['user_id'];
+
+            // Step 2: Define statuses
             $statuses = ['to_pickup', 'to_deliver'];
             $statusPlaceholders = implode(',', array_fill(0, count($statuses), '?'));
-            $types = str_repeat('s', count($statuses));
+            $types = str_repeat('s', count($statuses)) . 'i'; // 's' for status, 'i' for rider_id
 
+            // Step 3: Query orders assigned to active rider
             $sql = "SELECT 
                     o.order_id,
                     o.user_id,
@@ -569,16 +640,22 @@ class OrderModel
                 LEFT JOIN order_items oi ON o.order_id = oi.order_id
                 LEFT JOIN gallons g ON oi.gallon_id = g.gallon_id
                 WHERE o.status IN ($statusPlaceholders)
+                AND o.rider_id = ?
                 ORDER BY o.created_at DESC";
 
             $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param($types, ...$statuses);
+
+            // Merge statuses + rider_id into one array
+            $params = array_merge($statuses, [$activeRiderId]);
+
+            // Use argument unpacking properly
+            $stmt->bind_param($types, ...$params);
             $stmt->execute();
             $result = $stmt->get_result();
 
             $rawData = $result->fetch_all(MYSQLI_ASSOC);
 
-            // Group per order_id
+            // Step 4: Group per order_id
             $orders = [];
             foreach ($rawData as $row) {
                 $orderId = $row['order_id'];
@@ -611,10 +688,11 @@ class OrderModel
             return array_values($orders);
         } catch (Exception $e) {
             $debugFile = __DIR__ . "/../logs/debug.log";
-            file_put_contents($debugFile, "[" . date("Y-m-d H:i:s") . "] Error: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
+            file_put_contents($debugFile, "[" . date("Y-m-d H:i:s") . "] getOrdersForActiveRider() Error: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
             throw $e;
         }
     }
+
 
     // Update order status (rider) - FIXED: order_id is varchar
     public function riderUpdateStatus($orderId, $newStatus)
@@ -644,24 +722,29 @@ class OrderModel
 
     public function getDeliveriesByRiderId($riderId)
     {
-        $query = "SELECT 
-                o.order_id,
-                o.user_id AS customer_id,
-                o.status,
-                o.total_price,
-                o.payment_method,
-                o.created_at,
-                c.first_name AS customer_first_name,
-                c.last_name AS customer_last_name,
-                a.label AS address_label,
-                a.address AS full_address
-              FROM orders o
-              JOIN users c ON o.user_id = c.user_id
-              LEFT JOIN addresses a ON o.address_id = a.address_id
-              WHERE o.status = 'completed'
-              ORDER BY o.created_at DESC";
+        $query = "
+        SELECT 
+            o.order_id,
+            o.user_id AS customer_id,
+            o.status,
+            o.total_price,
+            o.payment_method,
+            o.payment_status,
+            DATE_FORMAT(o.created_at, '%m-%d-%Y %h:%i %p') AS created_at,
+            c.first_name AS customer_first_name,
+            c.last_name AS customer_last_name,
+            a.label AS address_label,
+            a.address AS full_address
+        FROM orders o
+        JOIN users c ON o.user_id = c.user_id
+        LEFT JOIN addresses a ON o.address_id = a.address_id
+        WHERE o.status = 'delivered'
+        AND o.rider_id = ?
+        ORDER BY o.created_at DESC
+    ";
 
         $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $riderId);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -673,6 +756,7 @@ class OrderModel
                 'status' => $row['status'],
                 'total_price' => $row['total_price'],
                 'payment_method' => $row['payment_method'],
+                'payment_status' => $row['payment_status'],
                 'address' => $row['address_label']
                     ? $row['address_label'] . ' - ' . $row['full_address']
                     : $row['full_address'],
@@ -682,6 +766,7 @@ class OrderModel
 
         return $deliveries;
     }
+
 
     public function getSalesRevenue()
     {

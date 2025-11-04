@@ -140,4 +140,15 @@ class AddressModel
         }
         return $addresses;
     }
+
+    public function unsetOtherDefaults($userId, $excludeAddressId)
+    {
+        $stmt = $this->conn->prepare("
+        UPDATE addresses 
+        SET is_default = 0 
+        WHERE user_id = ? AND address_id != ?
+    ");
+        $stmt->bind_param("ii", $userId, $excludeAddressId);
+        return $stmt->execute();
+    }
 }

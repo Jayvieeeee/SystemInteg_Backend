@@ -21,19 +21,25 @@ class GallonController
 
     public function createGallon($request, $userId)
     {
-        $uploadedImagePath = null;
+        // // ✅ Image is REQUIRED - validate first
+        // if (!isset($request['_files']['image']) || $request['_files']['image']['error'] !== UPLOAD_ERR_OK) {
+        //     throw new ValidationException("Image is required");
+        // }
 
-        // ✅ Handle file upload if present
-        if (isset($request['_files']['image']) && $request['_files']['image']['error'] === UPLOAD_ERR_OK) {
-            $uploadedImagePath = $this->handleImageUpload($request['_files']['image']);
+        // ✅ Handle file upload
+        $uploadedImagePath = $this->handleImageUpload($request['_files']['image']);
+
+        // ✅ Check if upload was successful
+        if (!$uploadedImagePath) {
+            throw new ValidationException("Failed to upload image. Please ensure it's a valid image file (JPEG, PNG, WEBP) under 5MB");
         }
 
         // ✅ Always prefer uploaded image (not client-provided URL)
         $data = [
-            'name'  => $request['name'] ?? '',
-            'image_url' => $uploadedImagePath, // ✅ Only use uploaded path
-            'size'  => $request['size'] ?? '',
-            'price' => isset($request['price']) ? (float)$request['price'] : 0
+            'name'      => $request['name'] ?? '',
+            'image_url' => $uploadedImagePath,
+            'size'      => $request['size'] ?? '',
+            'price'     => isset($request['price']) ? (float)$request['price'] : 0
         ];
 
         $result = $this->gallonModel->create($data);
