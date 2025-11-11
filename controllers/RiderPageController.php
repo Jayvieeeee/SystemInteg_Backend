@@ -11,16 +11,17 @@ class RiderPageController
     }
 
     // 1. Get orders for active rider (To Pick Up & To Deliver)
-    public function getOrders()
+    public function getOrders($riderId)
     {
         try {
-            $orders = $this->orderModel->getOrdersForActiveRider();
+            // Pass the specific rider_id to get only their orders
+            $orders = $this->orderModel->getOrdersForRider($riderId);
 
             // If empty result
             if (empty($orders)) {
                 return [
                     "success" => false,
-                    "message" => "No active rider orders found."
+                    "message" => "No orders found for this rider."
                 ];
             }
 
@@ -42,7 +43,6 @@ class RiderPageController
             ];
         }
     }
-
 
     public function updateStatus($request, $userId, $orderId)
     {
@@ -75,9 +75,9 @@ class RiderPageController
         ];
     }
 
-    public function getDeliveryHistory()
+    public function getDeliveryHistory($riderId)
     {
-        $completedOrders = $this->orderModel->getDeliveredOrders();
+        $completedOrders = $this->orderModel->getDeliveriesByRiderId($riderId);
         return $completedOrders;
     }
 }

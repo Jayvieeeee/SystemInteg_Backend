@@ -9,7 +9,7 @@ require_once __DIR__ . '/middleware/CorsMiddleware.php';
 $container = require __DIR__ . '/init/Services.php';
 $routes = require __DIR__ . '/routes/api.php';
 
-// Error response
+
 function sendErrorResponse($e)
 {
     $statusCode = method_exists($e, "getStatusCode") ? $e->getStatusCode() : 500;
@@ -25,7 +25,7 @@ function sendErrorResponse($e)
 // Handle CORS immediately using CorsMiddleware (static call)
 CorsMiddleware::handlePreflight();
 
-// Set content type
+
 header("Content-Type: application/json; charset=UTF-8");
 
 // Parse request

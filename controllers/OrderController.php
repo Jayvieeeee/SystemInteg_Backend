@@ -22,6 +22,12 @@ class OrderController
             throw new ValidationException("Missing required fields: pickup_datetime, payment_method", 422);
         }
 
+        // ✅ Limit check: max 5 per timeslot
+        if (!$this->orderModel->isTimeslotAvailable($data['pickup_datetime'])) {
+            throw new ValidationException("Maximum orders reached for this time slot. Please choose a different pickup time.", 422);
+        }
+
+
         // Validate address
         $addressId = null;
         $addressDetails = null;

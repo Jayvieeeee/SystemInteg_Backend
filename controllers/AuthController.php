@@ -53,18 +53,27 @@ class AuthController
 
     public function register($data)
     {
-        // Check if email or username exists (active users only)
-        if ($this->userModel->exists($data['email'], $data['username'])) {
+        $email = $data['email'] ?? null;
+        $username = $data['username'] ?? null;
+        $contactNo = $data['contact_no'] ?? null;
+
+        // Validate required fields
+        if (!$email || !$username || !$contactNo) {
+            throw new ValidationException("Email, username, and contact number are required", 422);
+        }
+
+        // Check if email or username exists
+        if ($this->userModel->exists($email, $username)) {
             throw new ConflictException("Email or username already exists", 409);
         }
 
-        // Check if contact number already exists (active users only)
-        if ($this->userModel->contactExists($data['contact_no'])) {
+        // Check if contact number already exists
+        if ($this->userModel->contactExists($contactNo)) {
             throw new ConflictException("Contact number already exists", 409);
         }
 
         // Hash password
-        $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        $data['password'] = password_hash($data['password'] ?? '', PASSWORD_DEFAULT);
 
         // Default role
         $data['role'] = 'customer';

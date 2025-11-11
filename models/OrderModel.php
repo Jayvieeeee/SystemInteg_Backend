@@ -454,7 +454,8 @@ class OrderModel
             o.payment_method,
             o.payment_status,
             DATE_FORMAT(o.created_at, '%m-%d-%Y %h:%i%p') AS date_time,
-            o.status
+            o.status,
+            o.delivered_at
         FROM orders o
         JOIN users u ON o.user_id = u.user_id
         JOIN order_items oi ON o.order_id = oi.order_id
@@ -596,30 +597,134 @@ class OrderModel
         return $orders;
     }
 
-    public function getOrdersForActiveRider()
+    // public function getOrdersForActiveRider()
+    // {
+    //     try {
+    //         // Step 1: Get active rider
+    //         $riderQuery = "SELECT user_id FROM users WHERE role = 'rider' AND status = 'active' LIMIT 1";
+    //         $riderResult = $this->conn->query($riderQuery);
+    //         $riderRow = $riderResult->fetch_assoc();
+
+    //         if (!$riderRow) {
+    //             return []; // no active rider
+    //         }
+
+    //         $activeRiderId = $riderRow['user_id'];
+
+    //         // Step 2: Define statuses
+    //         $statuses = ['to_pickup', 'to_deliver'];
+    //         $statusPlaceholders = implode(',', array_fill(0, count($statuses), '?'));
+    //         $types = str_repeat('s', count($statuses)) . 'i'; // 's' for status, 'i' for rider_id
+
+    //         // Step 3: Query orders assigned to active rider
+    //         $sql = "SELECT 
+    //                 o.order_id,
+    //                 o.user_id,
+    //                 o.address_id,
+    //                 o.pickup_datetime,
+    //                 o.payment_method,
+    //                 o.payment_status,
+    //                 o.total_price,
+    //                 o.created_at,
+    //                 o.updated_at,
+    //                 o.status AS status,
+    //                 CONCAT(u.first_name, ' ', u.last_name) AS customer_name,
+    //                 u.contact_no AS contact_number,
+    //                 a.address,
+    //                 g.gallon_id,
+    //                 g.name AS gallon_name,
+    //                 g.image_url,
+    //                 oi.quantity
+    //             FROM orders o
+    //             LEFT JOIN users u ON o.user_id = u.user_id
+    //             LEFT JOIN addresses a ON o.address_id = a.address_id
+    //             LEFT JOIN order_items oi ON o.order_id = oi.order_id
+    //             LEFT JOIN gallons g ON oi.gallon_id = g.gallon_id
+    //             WHERE o.status IN ($statusPlaceholders)
+    //             AND o.rider_id = ?
+    //             ORDER BY o.created_at DESC";
+
+    //         $stmt = $this->conn->prepare($sql);
+
+    //         // Merge statuses + rider_id into one array
+    //         $params = array_merge($statuses, [$activeRiderId]);
+
+    //         // Use argument unpacking properly
+    //         $stmt->bind_param($types, ...$params);
+    //         $stmt->execute();
+    //         $result = $stmt->get_result();
+
+    //         $rawData = $result->fetch_all(MYSQLI_ASSOC);
+
+    //         // Step 4: Group per order_id
+    //         $orders = [];
+    //         foreach ($rawData as $row) {
+    //             $orderId = $row['order_id'];
+
+    //             if (!isset($orders[$orderId])) {
+    //                 $orders[$orderId] = [
+    //                     'order_id' => $row['order_id'],
+    //                     'pickup_datetime' => $row['pickup_datetime'],
+    //                     'payment_method' => $row['payment_method'],
+    //                     'payment_status' => $row['payment_status'],
+    //                     'total_price' => $row['total_price'],
+    //                     'status' => $row['status'],
+    //                     'customer_name' => $row['customer_name'],
+    //                     'contact_number' => $row['contact_number'],
+    //                     'address' => $row['address'],
+    //                     'items' => []
+    //                 ];
+    //             }
+
+    //             if (!empty($row['gallon_id'])) {
+    //                 $orders[$orderId]['items'][] = [
+    //                     'gallon_id' => $row['gallon_id'],
+    //                     'gallon_name' => $row['gallon_name'],
+    //                     'image_url' => $row['image_url'],
+    //                     'quantity' => $row['quantity']
+    //                 ];
+    //             }
+    //         }
+
+    //         return array_values($orders);
+    //     } catch (Exception $e) {
+    //         $debugFile = __DIR__ . "/../logs/debug.log";
+    //         file_put_contents($debugFile, "[" . date("Y-m-d H:i:s") . "] getOrdersForActiveRider() Error: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
+    //         throw $e;
+    //     }
+    // }
+
+
+    public function getOrdersForRider($riderId)
     {
         try {
-            // Step 1: Get active rider
-            $riderQuery = "SELECT user_id FROM users WHERE role = 'rider' AND status = 'active' LIMIT 1";
-            $riderResult = $this->conn->query($riderQuery);
-            $riderRow = $riderResult->fetch_assoc();
+            // Step 1: Verify this rider exists and is active
+            $riderQuery = "SELECT user_id, status FROM users WHERE user_id = ? AND role = 'rider' LIMIT 1";
+            $stmt = $this->conn->prepare($riderQuery);
+            $stmt->bind_param('i', $riderId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $riderRow = $result->fetch_assoc();
 
             if (!$riderRow) {
-                return []; // no active rider
+                return []; // Rider doesn't exist or not a rider
             }
 
-            $activeRiderId = $riderRow['user_id'];
+            // Optional: Check if rider is active (uncomment if needed)
+            // if ($riderRow['status'] !== 'active') {
+            //     return []; // Rider is not active
+            // }
 
             // Step 2: Define statuses
             $statuses = ['to_pickup', 'to_deliver'];
             $statusPlaceholders = implode(',', array_fill(0, count($statuses), '?'));
-            $types = str_repeat('s', count($statuses)) . 'i'; // 's' for status, 'i' for rider_id
 
-            // Step 3: Query orders assigned to active rider
+            // Step 3: Query orders assigned to THIS SPECIFIC rider
             $sql = "SELECT 
                     o.order_id,
                     o.user_id,
                     o.address_id,
+                    o.rider_id,
                     o.pickup_datetime,
                     o.payment_method,
                     o.payment_status,
@@ -645,14 +750,13 @@ class OrderModel
 
             $stmt = $this->conn->prepare($sql);
 
-            // Merge statuses + rider_id into one array
-            $params = array_merge($statuses, [$activeRiderId]);
-
-            // Use argument unpacking properly
+            // Bind status parameters + rider_id
+            $types = str_repeat('s', count($statuses)) . 'i';
+            $params = array_merge($statuses, [$riderId]);
             $stmt->bind_param($types, ...$params);
+
             $stmt->execute();
             $result = $stmt->get_result();
-
             $rawData = $result->fetch_all(MYSQLI_ASSOC);
 
             // Step 4: Group per order_id
@@ -663,6 +767,7 @@ class OrderModel
                 if (!isset($orders[$orderId])) {
                     $orders[$orderId] = [
                         'order_id' => $row['order_id'],
+                        'rider_id' => $row['rider_id'],
                         'pickup_datetime' => $row['pickup_datetime'],
                         'payment_method' => $row['payment_method'],
                         'payment_status' => $row['payment_status'],
@@ -688,11 +793,10 @@ class OrderModel
             return array_values($orders);
         } catch (Exception $e) {
             $debugFile = __DIR__ . "/../logs/debug.log";
-            file_put_contents($debugFile, "[" . date("Y-m-d H:i:s") . "] getOrdersForActiveRider() Error: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
+            file_put_contents($debugFile, "[" . date("Y-m-d H:i:s") . "] getOrdersForRider() Error: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
             throw $e;
         }
     }
-
 
     // Update order status (rider) - FIXED: order_id is varchar
     public function riderUpdateStatus($orderId, $newStatus)
@@ -888,5 +992,25 @@ class OrderModel
         }
 
         return ['success' => false, 'message' => 'Failed to cancel order'];
+    }
+    public function isTimeslotAvailable($pickupDatetime)
+    {
+        $stmt = $this->conn->prepare("
+        SELECT COUNT(DISTINCT address_id) as unique_addresses
+        FROM orders
+        WHERE pickup_datetime = ?
+          AND status != 'cancelled'
+    ");
+
+        $stmt->bind_param("s", $pickupDatetime);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $stmt->close();
+
+        $uniqueAddresses = $row['unique_addresses'];
+
+        // Maximum 5 different addresses per timeslot
+        return $uniqueAddresses < 3;
     }
 }
