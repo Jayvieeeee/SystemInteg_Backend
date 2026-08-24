@@ -7,9 +7,9 @@ define('JWT_SECRET_KEY', 'supersecretkey123');
 
 //database constant
 define('DB_HOST', 'localhost');
-define('DB_USER', 'u465107535_root');
-define('DB_PASS', 'Dbpass#23');
-define('DB_NAME', 'u465107535_sismoya_db');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'sismoya_db');
 
 //Error Reporting
 if (APP_ENV === 'development') {
