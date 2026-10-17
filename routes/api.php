@@ -75,5 +75,9 @@ return [
     ['path' => '/rider/orders/{id}/update-status', 'method' => 'PUT', 'controller' => 'RiderPageController', 'action' => 'updateStatus', 'auth' => true, 'role' => 'rider'],
     ['path' => '/rider/delivery-history', 'method' => 'GET', 'controller' => 'RiderPageController', 'action' => 'getDeliveryHistory', 'auth' => true, 'role' => 'rider'],
 
+        // Xendit Payment
+    ['path' => '/payments/xendit/create',          'method' => 'POST', 'controller' => 'XenditController', 'action' => 'create',  'auth' => true],
+    ['path' => '/payments/xendit/webhook',         'method' => 'POST', 'controller' => 'XenditController', 'action' => 'webhook', 'auth' => false],
+    ['path' => '/payments/xendit/status/{orderId}', 'method' => 'GET',  'controller' => 'XenditController', 'action' => 'status',  'auth' => true],
 
 ];

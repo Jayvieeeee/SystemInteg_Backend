@@ -7,6 +7,7 @@ require_once __DIR__ . '/../config/db.php';
 // Services
 require_once __DIR__ . '/../services/EmailService.php';
 require_once __DIR__ . '/../services/PaypalService.php';
+require_once __DIR__ . '/../services/XenditService.php';
 
 
 // Models
@@ -31,6 +32,7 @@ require_once __DIR__ . '/../controllers/AdminCustomerController.php';
 require_once __DIR__ . '/../controllers/AdminRiderController.php';
 require_once __DIR__ . '/../controllers/AdminDashboardController.php';
 require_once __DIR__ . '/../controllers/RiderPageController.php';
+require_once __DIR__ . '/../controllers/XenditController.php';
 
 
 // Middlewares 
@@ -93,6 +95,7 @@ $container->set('mailer', function ($c, $params) {
 // Email Service
 $container->set('emailService', fn($c, $params) => new EmailService($c->get('mailer')));
 $container->set('paypalService', fn($c, $params) => new PaypalService());
+$container->set('xenditService', fn($c, $params) => new XenditService());
 
 // Middlewares
 $container->set('loggerMiddleware', fn($c, $params) => new LoggerMiddleware());
@@ -149,6 +152,10 @@ $container->set('CartController', fn($c, $params) => new CartController(
 $container->set('PaypalController', fn($c, $params) => new PaypalController(
     $c->get('orderModel'),
     $c->get('paypalService')
+));
+$container->set('XenditController', fn($c, $params) => new XenditController(
+    $c->get('orderModel'),
+    $c->get('xenditService')
 ));
 $container->set('AdminOrdersController', fn($c, $params) => new AdminOrdersController(
     $c->get('orderModel')

@@ -33,3 +33,36 @@ Stack trace:
 #2 C:\xampp\htdocs\sismoya\index.php(9): require('C:\\xampp\\htdocs...')
 #3 {main}
   thrown in C:\xampp\htdocs\sismoya\config\db.php on line 5
+[10-Sep-2026 13:39:40 Europe/Berlin] JWT userId sa GET: 7
+[10-Sep-2026 13:40:01 Europe/Berlin] JWT userId sa GET: 7
+[10-Sep-2026 14:25:04 Europe/Berlin] JWT userId sa GET: 55
+[01-Oct-2026 13:14:00 Europe/Berlin] JWT userId sa GET: 55
+[06-Oct-2026 03:11:23 Europe/Berlin] JWT userId sa GET: 55
+[06-Oct-2026 03:12:01 Europe/Berlin] JWT userId sa GET: 55
+[06-Oct-2026 03:20:51 Europe/Berlin] JWT userId sa GET: 55
+[06-Oct-2026 03:25:53 Europe/Berlin] JWT userId sa GET: 55
+[06-Oct-2026 03:25:56 Europe/Berlin] JWT userId sa GET: 55
+[06-Oct-2026 03:30:53 Europe/Berlin] JWT userId sa GET: 55
+[06-Oct-2026 03:33:55 Europe/Berlin] JWT userId sa GET: 55
+[06-Oct-2026 03:50:21 Europe/Berlin] JWT userId sa GET: 55
+[17-Oct-2026 17:18:20 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "Firebase\JWT\ExpiredException" not found in C:\xampp\htdocs\api\sismoya\libs\php-jwt-main\src\JWT.php:186
+Stack trace:
+#0 C:\xampp\htdocs\api\sismoya\middleware\AuthMiddleware.php(55): Firebase\JWT\JWT::decode('eyJ0eXAiOiJKV1Q...', Object(SensitiveParameterValue))
+#1 C:\xampp\htdocs\api\sismoya\middleware\MiddlewareRunner.php(14): AuthMiddleware->handle(Array)
+#2 C:\xampp\htdocs\api\sismoya\index.php(115): MiddlewareRunner->run(Array)
+#3 {main}
+  thrown in C:\xampp\htdocs\api\sismoya\libs\php-jwt-main\src\JWT.php on line 186
+[17-Oct-2026 17:18:20 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "Firebase\JWT\ExpiredException" not found in C:\xampp\htdocs\api\sismoya\libs\php-jwt-main\src\JWT.php:186
+Stack trace:
+#0 C:\xampp\htdocs\api\sismoya\middleware\AuthMiddleware.php(55): Firebase\JWT\JWT::decode('eyJ0eXAiOiJKV1Q...', Object(SensitiveParameterValue))
+#1 C:\xampp\htdocs\api\sismoya\middleware\MiddlewareRunner.php(14): AuthMiddleware->handle(Array)
+#2 C:\xampp\htdocs\api\sismoya\index.php(115): MiddlewareRunner->run(Array)
+#3 {main}
+  thrown in C:\xampp\htdocs\api\sismoya\libs\php-jwt-main\src\JWT.php on line 186
+[17-Oct-2026 17:18:27 Europe/Berlin] JWT userId sa GET: 55
+[17-Oct-2026 17:23:56 Europe/Berlin] JWT userId sa GET: 55
+[17-Oct-2026 17:25:12 Europe/Berlin] JWT userId sa GET: 55
+[17-Oct-2026 17:25:42 Europe/Berlin] Xendit: order CBVF2308 marked as paid (invoice 6ad39368857a2af33c31f365)
+[17-Oct-2026 17:32:55 Europe/Berlin] JWT userId sa GET: 55
+[17-Oct-2026 17:33:03 Europe/Berlin] JWT userId sa GET: 55
+[17-Oct-2026 17:36:29 Europe/Berlin] JWT userId sa GET: 55

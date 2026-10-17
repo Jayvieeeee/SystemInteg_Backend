@@ -173,25 +173,30 @@ class OrderController
         ];
     }
 
-    public function getUserOrders($userId)
-    {
-        $orders = $this->orderModel->getOrdersByUserId($userId);
+  public function getUserOrders($userId)
+{
+    $orders = $this->orderModel->getOrdersByUserId($userId) ?: [];
 
-        foreach ($orders as &$order) {
-            $order['total_price'] = (float) $order['total_price'];
-            $order['items'] = $this->orderModel->getOrderItems($order['order_id']);
-            foreach ($order['items'] as &$item) {
-                $item['price'] = (float) $item['price'];
-                $item['total_price'] = (float) $item['total_price'];
-            }
+    foreach ($orders as &$order) {
+        $order['total_price'] = (float) ($order['total_price'] ?? 0);
+        $items = $this->orderModel->getOrderItems($order['order_id']) ?: [];
+
+        foreach ($items as &$item) {
+            $item['price'] = (float) ($item['price'] ?? 0);
+            $item['total_price'] = (float) ($item['total_price'] ?? 0);
         }
+        unset($item);
 
-        return [
-            'success' => true,
-            'orders' => $orders,
-            'count' => count($orders)
-        ];
+        $order['items'] = $items;
     }
+    unset($order);
+
+    return [
+        'success' => true,
+        'orders' => $orders,
+        'count' => count($orders),
+    ];
+}
 
     public function getOrderStats($userId)
     {

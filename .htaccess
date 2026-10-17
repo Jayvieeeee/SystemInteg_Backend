@@ -1,15 +1,20 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /api/
+    RewriteBase /api/sismoya/
 
-    # Set Authorization header for PHP
+    # Pass Authorization header to PHP (works on Apache with CGI/FPM too)
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
     SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
 
-    # Disable error display for production
-    php_flag display_errors off
-    php_flag log_errors on
-    php_value error_reporting E_ALL
-    php_value error_log "error_log.txt"
+    # Block direct access to internal folders (only when they really exist on disk,
+    # so virtual API routes with the same name are not affected)
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^(\.vscode|\.git|config|controllers|core|exceptions|init|libs|logs|middleware|models|routes|services|vendor)(/|$) - [F,L]
+
+    # Block sensitive files
+    RewriteRule (^|/)(\.gitattributes|\.gitignore|composer\.(json|lock)|error_log\.txt|headers\.php)$ - [F,L]
+    RewriteRule \.(log|env|sql|md|bak|ini)$ - [F,L]
 
     # FIRST: Serve existing static files (images, CSS, JS) directly
     RewriteCond %{REQUEST_FILENAME} -f
@@ -19,4 +24,12 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# PHP error settings (only works when PHP runs as an Apache module)
+<IfModule mod_php.c>
+    php_flag display_errors off
+    php_flag log_errors on
+    php_value error_reporting E_ALL
+    php_value error_log "error_log.txt"
 </IfModule>
