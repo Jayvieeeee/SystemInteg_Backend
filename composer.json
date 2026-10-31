@@ -29,8 +29,5 @@
       "email": "dalmaciochrisha6@gmail.com"
     }
   ],
-  "require": {
-    "firebase/php-jwt": "^6.8",
-    "phpmailer/phpmailer": "^6.8"
-  }
+  "require": {}
 }
