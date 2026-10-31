@@ -1,6 +1,17 @@
 <?php
 // Vercel entry point: ipapasa lang sa existing index.php mo
 
+// --- CORS: dapat nasa pinakataas, bago mag-load ng kahit ano (DB, services) ---
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+// --- hanggang dito ---
+
 // Para tama yung pag-compute ng router sa "/api" prefix
 $_SERVER['SCRIPT_NAME'] = '/api/index.php';
 
