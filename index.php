@@ -9,9 +9,14 @@ require_once __DIR__ . '/middleware/CorsMiddleware.php';
 $container = require __DIR__ . '/init/Services.php';
 $routes = require __DIR__ . '/routes/api.php';
 
-
 function sendErrorResponse($e)
 {
+    // I-log ang totoong error para makita sa Vercel Logs (hindi lalabas sa user)
+    $logMsg = 'API error: ' . get_class($e) . ' - ' . $e->getMessage()
+        . ' @ ' . basename($e->getFile()) . ':' . $e->getLine();
+    error_log($logMsg);
+    @file_put_contents('php://stderr', $logMsg . PHP_EOL);
+
     $statusCode = method_exists($e, "getStatusCode") ? $e->getStatusCode() : 500;
     http_response_code($statusCode);
     header("Content-Type: application/json");
