@@ -133,7 +133,7 @@ class ValidateMiddleware extends BaseMiddleware
 
         list($user, $domain) = explode('@', $email);
 
-        if (!checkdnsrr($domain, "MX")) {
+        if (getenv('SKIP_MX_CHECK') !== '1' && !checkdnsrr($domain, "MX")) {
             throw new ValidationException("Invalid email. Please enter correct email");
         }
 
