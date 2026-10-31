@@ -12,7 +12,7 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'sismoya_db');
 define('DB_PORT', (int) (getenv('DB_PORT') ?: 3306));
 
-// Error Reporting
+// Error Reportinggit push[]
 if (APP_ENV === 'development') {
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
