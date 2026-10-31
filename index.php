@@ -12,15 +12,12 @@ $routes = require __DIR__ . '/routes/api.php';
 
 function sendErrorResponse($e)
 {
-    // I-log ang totoong error para makita sa Vercel Logs (hindi lalabas sa user)
-    error_log('API error: ' . get_class($e) . ' - ' . $e->getMessage());
-
     $statusCode = method_exists($e, "getStatusCode") ? $e->getStatusCode() : 500;
     http_response_code($statusCode);
     header("Content-Type: application/json");
     echo json_encode([
         "error" => true,
-        "message" => (APP_ENV === 'development') ? $e->getMessage() : "Something went wrong"
+        "message" => (APP_ENV === 'development' || $e instanceof AppException) ? $e->getMessage() : "Something went wrong"
     ]);
     exit;
 }
