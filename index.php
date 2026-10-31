@@ -2,7 +2,7 @@
 require_once __DIR__ . '/exceptions/AppException.php';
 require_once __DIR__ . '/exceptions/AuthException.php';
 require_once __DIR__ . '/exceptions/ValidationException.php';
-require_once __DIR__ . '/exceptions/NotFoundException.php';
+require_once __DIR__ . '/exceptions/NotfoundException.php';
 require_once __DIR__ . '/exceptions/ConflictException.php';
 require_once __DIR__ . '/middleware/CorsMiddleware.php';
 
