@@ -917,6 +917,7 @@ class OrderModel
         return $this->conn->query($query)->fetch_assoc()['count'];
     }
 
+
     public function getDeliveredOrders()
     {
         $sql = "SELECT 
@@ -996,11 +997,11 @@ class OrderModel
     public function isTimeslotAvailable($pickupDatetime)
     {
         $stmt = $this->conn->prepare("
-        SELECT COUNT(DISTINCT address_id) as unique_addresses
-        FROM orders
-        WHERE pickup_datetime = ?
-          AND status != 'cancelled'
-    ");
+            SELECT COUNT(*) as total_orders
+            FROM orders
+            WHERE pickup_datetime = ?
+              AND status != 'cancelled'
+        ");
 
         $stmt->bind_param("s", $pickupDatetime);
         $stmt->execute();
@@ -1008,9 +1009,9 @@ class OrderModel
         $row = $result->fetch_assoc();
         $stmt->close();
 
-        $uniqueAddresses = $row['unique_addresses'];
+        $totalOrders = $row['total_orders'];
 
-        // Maximum 5 different addresses per timeslot
-        return $uniqueAddresses < 3;
+        // Strictly limit capacity to a maximum of 5 orders per timeslot
+        return $totalOrders < 5;
     }
 }
