@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 require_once __DIR__ . '/../core/Container.php';
 require_once __DIR__ . '/../config/config.php';
