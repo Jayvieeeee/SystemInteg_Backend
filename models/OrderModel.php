@@ -22,27 +22,14 @@ class OrderModel
     {
         $this->conn->begin_transaction();
         try {
-            // Generate unique order_id
-            do {
-                $orderId = $this->generateOrderId();
-                $checkStmt = $this->conn->prepare("SELECT order_id FROM orders WHERE order_id = ?");
-                $checkStmt->bind_param("s", $orderId);
-                $checkStmt->execute();
-                $exists = $checkStmt->get_result()->num_rows > 0;
-                $checkStmt->close();
-            } while ($exists);
-
-            // ✅ Get active rider (kung meron)
             $riderId = $this->getActiveRiderId();
 
-            // ✅ Insert order + include rider_id
             $stmt = $this->conn->prepare("
-            INSERT INTO orders (order_id, user_id, address_id, pickup_datetime, payment_method, total_price, rider_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO orders (user_id, address_id, pickup_datetime, payment_method, total_price, rider_id)
+            VALUES (?, ?, ?, ?, ?, ?)
         ");
             $stmt->bind_param(
-                "siissdi",
-                $orderId,
+                "iissdi",
                 $data['user_id'],
                 $data['address_id'],
                 $data['pickup_datetime'],
@@ -50,24 +37,28 @@ class OrderModel
                 $data['total_price'],
                 $riderId
             );
-            $stmt->execute();
+            if (!$stmt->execute()) {
+                throw new Exception("Insert order failed: " . $stmt->error);
+            }
+            $orderId = $this->conn->insert_id;
             $stmt->close();
 
-            // Insert order items
             $stmtItem = $this->conn->prepare("
             INSERT INTO order_items (order_id, gallon_id, quantity, price, total_price)
             VALUES (?, ?, ?, ?, ?)
         ");
             foreach ($data['items'] as $item) {
                 $stmtItem->bind_param(
-                    "siidd",
+                    "iiidd",
                     $orderId,
                     $item['gallon_id'],
                     $item['quantity'],
                     $item['price'],
                     $item['total_price']
                 );
-                $stmtItem->execute();
+                if (!$stmtItem->execute()) {
+                    throw new Exception("Insert item failed: " . $stmtItem->error);
+                }
             }
             $stmtItem->close();
 
@@ -93,31 +84,20 @@ class OrderModel
     }
 
     // Create order from cart - with rider assignment
+
+
     public function createFromCart($userId, $cartItems, $data)
     {
         $this->conn->begin_transaction();
         try {
-            // Generate unique order_id
-            do {
-                $orderId = $this->generateOrderId();
-                $checkStmt = $this->conn->prepare("SELECT order_id FROM orders WHERE order_id = ?");
-                $checkStmt->bind_param("s", $orderId);
-                $checkStmt->execute();
-                $exists = $checkStmt->get_result()->num_rows > 0;
-                $checkStmt->close();
-            } while ($exists);
-
-            // Get active rider (same as create())
             $riderId = $this->getActiveRiderId();
 
-            // Insert into orders with generated order_id + rider_id
             $stmt = $this->conn->prepare("
-            INSERT INTO orders (order_id, user_id, address_id, pickup_datetime, payment_method, total_price, rider_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO orders (user_id, address_id, pickup_datetime, payment_method, total_price, rider_id)
+            VALUES (?, ?, ?, ?, ?, ?)
         ");
             $stmt->bind_param(
-                "siissdi",
-                $orderId,
+                "iissdi",
                 $userId,
                 $data['address_id'],
                 $data['pickup_datetime'],
@@ -125,25 +105,28 @@ class OrderModel
                 $data['total_price'],
                 $riderId
             );
-            $stmt->execute();
+            if (!$stmt->execute()) {
+                throw new Exception("Insert order failed: " . $stmt->error);
+            }
+            $orderId = $this->conn->insert_id;
             $stmt->close();
 
-            // Insert order items from cart
             $stmtItem = $this->conn->prepare("
             INSERT INTO order_items (order_id, gallon_id, quantity, price, total_price)
             VALUES (?, ?, ?, ?, ?)
         ");
-
             foreach ($cartItems as $item) {
                 $stmtItem->bind_param(
-                    "siidd",
+                    "iiidd",
                     $orderId,
                     $item['gallon_id'],
                     $item['quantity'],
                     $item['price'],
                     $item['total_price']
                 );
-                $stmtItem->execute();
+                if (!$stmtItem->execute()) {
+                    throw new Exception("Insert item failed: " . $stmtItem->error);
+                }
             }
             $stmtItem->close();
 
@@ -152,14 +135,15 @@ class OrderModel
             if (!empty($cartIds)) {
                 $placeholders = implode(',', array_fill(0, count($cartIds), '?'));
                 $stmtDelete = $this->conn->prepare("
-                DELETE FROM cart 
+                DELETE FROM cart
                 WHERE cart_id IN ($placeholders) AND user_id = ?
             ");
-
                 $types = str_repeat('i', count($cartIds)) . 'i';
                 $params = array_merge($cartIds, [$userId]);
                 $stmtDelete->bind_param($types, ...$params);
-                $stmtDelete->execute();
+                if (!$stmtDelete->execute()) {
+                    throw new Exception("Delete cart failed: " . $stmtDelete->error);
+                }
                 $stmtDelete->close();
             }
 
