@@ -109,8 +109,6 @@ class OrderController
             ];
 
             $orderId = $this->orderModel->createFromCart($userId, $items, $orderData);
-
-            $this->cartModel->removeItems($userId, array_column($cartItems, 'cart_item_id'));
         } else {
             throw new ValidationException("Order must include items or cart_items", 422);
         }
@@ -173,30 +171,30 @@ class OrderController
         ];
     }
 
-  public function getUserOrders($userId)
-{
-    $orders = $this->orderModel->getOrdersByUserId($userId) ?: [];
+    public function getUserOrders($userId)
+    {
+        $orders = $this->orderModel->getOrdersByUserId($userId) ?: [];
 
-    foreach ($orders as &$order) {
-        $order['total_price'] = (float) ($order['total_price'] ?? 0);
-        $items = $this->orderModel->getOrderItems($order['order_id']) ?: [];
+        foreach ($orders as &$order) {
+            $order['total_price'] = (float) ($order['total_price'] ?? 0);
+            $items = $this->orderModel->getOrderItems($order['order_id']) ?: [];
 
-        foreach ($items as &$item) {
-            $item['price'] = (float) ($item['price'] ?? 0);
-            $item['total_price'] = (float) ($item['total_price'] ?? 0);
+            foreach ($items as &$item) {
+                $item['price'] = (float) ($item['price'] ?? 0);
+                $item['total_price'] = (float) ($item['total_price'] ?? 0);
+            }
+            unset($item);
+
+            $order['items'] = $items;
         }
-        unset($item);
+        unset($order);
 
-        $order['items'] = $items;
+        return [
+            'success' => true,
+            'orders' => $orders,
+            'count' => count($orders),
+        ];
     }
-    unset($order);
-
-    return [
-        'success' => true,
-        'orders' => $orders,
-        'count' => count($orders),
-    ];
-}
 
     public function getOrderStats($userId)
     {
