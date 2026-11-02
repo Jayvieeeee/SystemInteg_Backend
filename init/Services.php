@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 require_once __DIR__ . '/../core/Container.php';
 require_once __DIR__ . '/../config/config.php';
@@ -104,7 +104,7 @@ $container->set('rateLimitMiddleware', fn($c, $params) => new RateLimitMiddlewar
 $container->set('sanitizeMiddleware', fn($c, $params) => new SanitizeMiddleware());
 $container->set('validateMiddleware', fn($c, $params) => new ValidateMiddleware($params));
 
-$container->set('authMiddleware', fn($c, $params) => new AuthMiddleware());
+$container->set('authMiddleware', fn($c, $params) => new AuthMiddleware($c->get('userModel')));
 
 
 $container->set('roleMiddleware', function ($c, $params = []) {
@@ -182,3 +182,4 @@ $container->set('RiderPageController', fn($c, $params) => new RiderPageControlle
 
 
 return $container;
+

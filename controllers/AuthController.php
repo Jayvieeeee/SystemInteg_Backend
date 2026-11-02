@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use \Firebase\JWT\JWT;
 use \Firebase\JWT\Key;
@@ -26,6 +26,10 @@ class AuthController
 
         if (!$user || !password_verify($data['password'] ?? '', $user['password'])) {
             throw new AuthException("Incorrect username or password", 401);
+        }
+
+        if (($user['status'] ?? 'inactive') !== 'active') {
+            throw new AuthException("Your account is inactive or suspended. Please contact support.", 401);
         }
 
         unset($user['password'], $user['reset_code'], $user['reset_code_exp'], $user['reset_verified']);
@@ -327,3 +331,4 @@ class AuthController
         ];
     }
 }
+

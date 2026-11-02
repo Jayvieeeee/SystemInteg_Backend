@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../exceptions/AuthException.php';
 require_once __DIR__ . '/../config/config.php';
 
@@ -7,6 +7,13 @@ use Firebase\JWT\Key;
 
 class AuthMiddleware extends BaseMiddleware
 {
+    private $userModel;
+
+    public function __construct($userModel = null)
+    {
+        $this->userModel = $userModel;
+    }
+
     private function getAuthorizationHeader()
     {
         $headers = null;
@@ -33,38 +40,54 @@ class AuthMiddleware extends BaseMiddleware
         $authHeader = $this->getAuthorizationHeader();
 
         if (!$authHeader) {
-            throw new AuthException("Missing Authorization header");
+            throw new AuthException("Unauthorized: Missing Authorization header", 401);
         }
 
-        // Format: Bearer <token>
-        if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-            throw new AuthException("Invalid Authorization header format");
+        if (!preg_match('/Bearer\s+(\S+)/', $authHeader, $matches)) {
+            throw new AuthException("Unauthorized: Invalid Authorization header format", 401);
         }
 
         $token = $matches[1];
 
         try {
-            // Verify JWT_SECRET_KEY is set
             if (!defined('JWT_SECRET_KEY') || empty(JWT_SECRET_KEY)) {
-                throw new AuthException("Server configuration error");
+                throw new AuthException("Server configuration error", 500);
             }
 
-            // Allow slight clock skew
-            JWT::$leeway = 60; // 60 seconds
+            JWT::$leeway = 60;
 
             $decoded = JWT::decode($token, new Key(JWT_SECRET_KEY, 'HS256'));
+            $userId = isset($decoded->user_id) ? (int) $decoded->user_id : null;
+            $role = $decoded->role ?? null;
 
-            // Extract user info from token
-            $request['user_id'] = $decoded->user_id ?? null;
-            $request['role'] = $decoded->role ?? null;
-
-            if (!$request['user_id']) {
-                throw new AuthException("Invalid token payload: missing user_id");
+            if (!$userId) {
+                throw new AuthException("Invalid token payload: missing user_id", 401);
             }
-        } catch (Exception $e) {
-            throw new AuthException("Invalid or expired token: " . $e->getMessage());
-        }
 
-        return $request;
+            if (!$this->userModel instanceof UserModel) {
+                $request['user_id'] = $userId;
+                $request['role'] = $role;
+                return $request;
+            }
+
+            $user = $this->userModel->findById($userId);
+
+            if (!$user) {
+                throw new AuthException("Unauthorized: user no longer exists", 401);
+            }
+
+            if (($user['status'] ?? 'inactive') !== 'active') {
+                throw new AuthException("Unauthorized: account is inactive or suspended", 401);
+            }
+
+            $request['user_id'] = $userId;
+            $request['role'] = $user['role'] ?? $role;
+
+            return $request;
+        } catch (AuthException $e) {
+            throw $e;
+        } catch (Exception $e) {
+            throw new AuthException("Invalid or expired token", 401);
+        }
     }
 }
