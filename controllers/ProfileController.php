@@ -31,8 +31,21 @@ class ProfileController
 
     private function getAuthenticatedUser()
     {
-        $headers = getallheaders();
-        $authHeader = $headers['Authorization'] ?? '';
+        $headers = function_exists('getallheaders') ? getallheaders() : [];
+        $authHeader = '';
+
+        foreach ($headers as $name => $value) {
+            if (strcasecmp($name, 'Authorization') === 0) {
+                $authHeader = $value;
+                break;
+            }
+        }
+
+        if (!$authHeader) {
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION']
+                ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+                ?? '';
+        }
 
         if (!$authHeader || !str_starts_with($authHeader, 'Bearer ')) {
             throw new AuthException("Unauthorized: No token provided", 401);

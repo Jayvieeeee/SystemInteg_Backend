@@ -235,13 +235,20 @@ class UserModel
                   CONCAT(u.first_name, ' ', u.last_name) AS name, 
                   u.email, 
                   u.contact_no, 
-                  a.address, 
-                  COUNT(o.order_id) AS total_orders
+                  (
+                      SELECT a.address
+                      FROM addresses a
+                      WHERE a.user_id = u.user_id
+                      ORDER BY a.is_default DESC, a.created_at DESC
+                      LIMIT 1
+                  ) AS address,
+                  (
+                      SELECT COUNT(*)
+                      FROM orders o
+                      WHERE o.user_id = u.user_id
+                  ) AS total_orders
               FROM users u
-              LEFT JOIN addresses a ON u.user_id = a.user_id
-              LEFT JOIN orders o ON u.user_id = o.user_id
-              WHERE u.role = 'customer'
-              GROUP BY u.user_id";
+              WHERE u.role = 'customer'";
 
         $result = $this->conn->query($query);
 
@@ -260,13 +267,20 @@ class UserModel
                   CONCAT(u.first_name, ' ', u.last_name) AS name, 
                   u.email, 
                   u.contact_no, 
-                  a.address, 
-                  COUNT(o.order_id) AS total_orders
+                  (
+                      SELECT a.address
+                      FROM addresses a
+                      WHERE a.user_id = u.user_id
+                      ORDER BY a.is_default DESC, a.created_at DESC
+                      LIMIT 1
+                  ) AS address,
+                  (
+                      SELECT COUNT(*)
+                      FROM orders o
+                      WHERE o.user_id = u.user_id
+                  ) AS total_orders
               FROM users u
-              LEFT JOIN addresses a ON u.user_id = a.user_id
-              LEFT JOIN orders o ON u.user_id = o.user_id
-              WHERE u.user_id = ? AND u.role = 'customer'
-              GROUP BY u.user_id";
+              WHERE u.user_id = ? AND u.role = 'customer'";
 
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param('i', $id);
