@@ -92,7 +92,7 @@ class OrderModel
         return $rider ? $rider['user_id'] : null;
     }
 
-    // Create order from cart - FIXED: order_id is now varchar
+    // Create order from cart - with rider assignment
     public function createFromCart($userId, $cartItems, $data)
     {
         $this->conn->begin_transaction();
@@ -107,28 +107,32 @@ class OrderModel
                 $checkStmt->close();
             } while ($exists);
 
-            // Insert into orders with generated order_id
+            // Get active rider (same as create())
+            $riderId = $this->getActiveRiderId();
+
+            // Insert into orders with generated order_id + rider_id
             $stmt = $this->conn->prepare("
-                INSERT INTO orders (order_id, user_id, address_id, pickup_datetime, payment_method, total_price)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ");
+            INSERT INTO orders (order_id, user_id, address_id, pickup_datetime, payment_method, total_price, rider_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
             $stmt->bind_param(
-                "siissd",
+                "siissdi",
                 $orderId,
                 $userId,
                 $data['address_id'],
                 $data['pickup_datetime'],
                 $data['payment_method'],
-                $data['total_price']
+                $data['total_price'],
+                $riderId
             );
             $stmt->execute();
             $stmt->close();
 
             // Insert order items from cart
             $stmtItem = $this->conn->prepare("
-                INSERT INTO order_items (order_id, gallon_id, quantity, price, total_price)
-                VALUES (?, ?, ?, ?, ?)
-            ");
+            INSERT INTO order_items (order_id, gallon_id, quantity, price, total_price)
+            VALUES (?, ?, ?, ?, ?)
+        ");
 
             foreach ($cartItems as $item) {
                 $stmtItem->bind_param(
@@ -148,11 +152,10 @@ class OrderModel
             if (!empty($cartIds)) {
                 $placeholders = implode(',', array_fill(0, count($cartIds), '?'));
                 $stmtDelete = $this->conn->prepare("
-                    DELETE FROM cart 
-                    WHERE cart_id IN ($placeholders) AND user_id = ?
-                ");
+                DELETE FROM cart 
+                WHERE cart_id IN ($placeholders) AND user_id = ?
+            ");
 
-                // Bind parameters: cart IDs + user_id
                 $types = str_repeat('i', count($cartIds)) . 'i';
                 $params = array_merge($cartIds, [$userId]);
                 $stmtDelete->bind_param($types, ...$params);
